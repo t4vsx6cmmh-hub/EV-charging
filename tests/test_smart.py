@@ -180,7 +180,22 @@ class ControllerTest(unittest.TestCase):
         car = FakeCar(level=0, limit=100)
         sc, _ = self.make(car, mode="off")
         sc.update(vitals(charging=True), T0)
-        self.assertEqual(car.calls, [])
+        self.assertNotIn("start", car.calls)
+        self.assertNotIn("stop", car.calls)
+
+    def test_own_target_pct_and_level_estimate(self):
+        car = FakeCar(level=50, limit=90)
+        sc, _ = self.make(car)
+        sc.set_settings({"maal_pct": 70})
+        sc.update(vitals(session_wh=0), T0)
+        # 20 % af 75 kWh / 0,9 = 16,7 kWh
+        self.assertAlmostEqual(sc.remaining, 20 / 100 * 75 / 0.9, places=2)
+        sc.update(vitals(session_wh=7500), T0 + 600)
+        self.assertAlmostEqual(sc.level_now(), 50 + 7.5 * 0.9 / 75 * 100, places=1)
+        sc.set_settings({"maal_pct": 100})      # højere end bilens ladegrænse -> 90 %
+        self.assertEqual(sc.target_pct(), 90)
+        sc.set_settings({"maal_pct": None})
+        self.assertEqual(sc.target_pct(), 90)
 
     def test_unplug_resets_and_preview(self):
         sc, _ = self.make(FakeCar())
@@ -195,8 +210,10 @@ class ControllerTest(unittest.TestCase):
     def test_settings_validation(self):
         sc, store = self.make()
         sc.set_settings({"mode": "now", "klar_kl": "6:05", "kwh": "20"})
-        self.assertEqual(store["smart_settings"], {"mode": "now", "klar_kl": "06:05", "kwh": 20.0})
-        for bad in ({"mode": "turbo"}, {"kwh": 0}, {"kwh": "x"}, {"klar_kl": "99:00"}):
+        self.assertEqual(store["smart_settings"], {"mode": "now", "klar_kl": "06:05", "kwh": 20.0,
+                                                   "maal_pct": None})
+        for bad in ({"mode": "turbo"}, {"kwh": 0}, {"kwh": "x"}, {"klar_kl": "99:00"},
+                    {"maal_pct": 10}, {"maal_pct": "fuld"}):
             with self.assertRaises(ValueError):
                 sc.set_settings(bad)
 

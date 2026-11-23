@@ -118,11 +118,12 @@ class SmartCharger:
         self.source = None
         self.desired = None
         self.charging = False
+        self.session_kwh = 0.0
 
     # ---------------------------------------------------------- indstillinger --
     def settings(self):
         s = {"mode": "off", "klar_kl": self.cfg["smart_default_ready"],
-             "kwh": float(self.cfg["smart_default_kwh"])}
+             "kwh": float(self.cfg["smart_default_kwh"]), "maal_pct": None}
         s.update(self.store.get_kv("smart_settings", {}) or {})
         return s
 
@@ -144,6 +145,16 @@ class SmartCharger:
             if not 0 < kwh <= 150:
                 raise ValueError("kWh skal ligge mellem 1 og 150")
             s["kwh"] = kwh
+        if "maal_pct" in data:
+            v = data["maal_pct"]
+            if v is not None:
+                try:
+                    v = float(v)
+                except (TypeError, ValueError):
+                    raise ValueError("Mål i % skal være et tal") from None
+                if not 20 <= v <= 100:
+                    raise ValueError("Mål i % skal ligge mellem 20 og 100")
+            s["maal_pct"] = v
         self.store.set_kv("smart_settings", s)
         return s
 
@@ -167,8 +178,9 @@ class SmartCharger:
             self._log(now, "Bilen er sat til")
         s = self.settings()
         session_kwh = float(v.get("session_energy_wh") or 0) / 1000
+        self.session_kwh = session_kwh
         self.charging = bool(v.get("contactor_closed")) and power_w(v) > 100
-        if s["mode"] == "smart" and self.car and now - self.soc_try_ts >= SOC_REFRESH:
+        if self.car and now - self.soc_try_ts >= SOC_REFRESH:
             self._refresh_soc(now, session_kwh)
         self.remaining, self.source = self._remaining(s, session_kwh)
         deadline = next_deadline(now, s["klar_kl"])
@@ -203,11 +215,24 @@ class SmartCharger:
         if self.car_full:
             return 0.0, "fuld"
         if self.soc:
-            pct = max(self.soc["graense"] - self.soc["niveau"], 0.0)
+            pct = max(self.target_pct(s) - self.soc["niveau"], 0.0)
             need = pct / 100 * float(self.cfg["battery_kwh"]) / float(self.cfg["charge_efficiency"])
             need -= session_kwh - self.soc["session_kwh"]
             return max(need, 0.0), "soc"
         return max(float(s["kwh"]) - session_kwh, 0.0), "kwh"
+
+    def target_pct(self, s=None):
+        """Mål i %: eget mål fra appen, dog højst bilens ladegrænse."""
+        s = s or self.settings()
+        limit = self.soc["graense"] if self.soc else 100.0
+        return min(float(s["maal_pct"]), limit) if s.get("maal_pct") else limit
+
+    def level_now(self):
+        """Skønnet batteriniveau nu: sidste aflæsning + det ladet siden."""
+        if not self.soc:
+            return None
+        added = (self.session_kwh - self.soc["session_kwh"]) * float(self.cfg["charge_efficiency"])
+        return round(min(self.soc["niveau"] + added / float(self.cfg["battery_kwh"]) * 100, 100.0), 1)
 
     def _enforce(self, want, now):
         if want == self.charging:
@@ -256,6 +281,9 @@ class SmartCharger:
             "mangler_kwh": None if self.remaining is None else round(self.remaining, 2),
             "kilde": self.source,
             "soc": self.soc,
+            "niveau_nu": self.level_now(),
+            "maal_pct": self.target_pct(s) if self.soc else s.get("maal_pct"),
+            "session_kwh": round(self.session_kwh, 2),
             "styrer_bilen": self.car is not None,
             "oensket": self.desired,
             "fejl": self.error,

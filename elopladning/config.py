@@ -33,6 +33,10 @@ DEFAULTS = {
     "charge_efficiency": 0.9,
     "smart_default_ready": "07:00",
     "smart_default_kwh": 30,
+    # Sammenligning med benzinbil
+    "consumption_kwh_per_100km": 18.0,
+    "petrol_l_per_100km": 6.0,
+    "petrol_price_kr_per_l": 13.5,
     # Tesla Fleet API (valgfrit – kræves kun for at appen selv kan starte/stoppe)
     "tesla_client_id": "",
     "tesla_client_secret": "",
@@ -116,6 +120,9 @@ def validate(cfg):
     num("battery_kwh", 10, 250)
     num("charge_efficiency", 0.5, 1)
     num("smart_default_kwh", 1, 150)
+    num("consumption_kwh_per_100km", 5, 60)
+    num("petrol_l_per_100km", 1, 30)
+    num("petrol_price_kr_per_l", 1, 50)
     num("notify_block_hours", 1, 12)
     num("notify_price_below", -5, 20, optional=True)
     for key in ("notify_session_end", "notify_smart_plan", "notify_tomorrow_prices", "notify_errors"):

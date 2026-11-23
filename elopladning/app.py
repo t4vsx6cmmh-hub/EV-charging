@@ -199,8 +199,11 @@ class App:
                 "session_kwh": round(float(v.get("session_energy_wh", 0)) / 1000, 2),
                 "session_min": round(float(v.get("session_s", 0)) / 60),
             })
+        hist = now - 14 * 86400
+        house_kw = calc.typical_house_kw(self.db.meter(hist, now), self.db.ev_intervals(hist, now), now)
         return {
             "wall_connector": wc,
+            "hus_typisk_kw": house_kw,
             "pris_nu": pm.parts(now),
             "tariffer": [{"navn": t["name"], "antal_priser": len(t["prices"])}
                          for t in self.tariffs()],
@@ -218,10 +221,10 @@ class App:
             },
         }
 
-    def api_prices(self, hours=4.0):
+    def api_prices(self, hours=4.0, days_back=0):
         now = int(time.time())
         today = datetime.now(DK).date()
-        t0, t1 = local_midnight(today), local_midnight(today + timedelta(days=2))
+        t0, t1 = local_midnight(today - timedelta(days=days_back)), local_midnight(today + timedelta(days=2))
         pm = self.price_model(t0, t1)
         pts = []
         for t in range(t0, t1, 900):
@@ -231,8 +234,32 @@ class App:
         st = self.smart.state(now)
         plan = ([s["t"] for s in st["plan"]["slots"]]
                 if st["plan"] and st["indstillinger"]["mode"] == "smart" else [])
-        return {"nu": now, "priser": pts, "plan": plan,
+        return {"nu": now, "priser": pts, "plan": plan, "i_dag": local_midnight(today),
                 "billigste_blok": calc.cheapest_block(pm, now, t1, hours)}
+
+    def api_insights(self, month=None):
+        """Nøgletal for en måned (YYYY-MM, standard: denne) og måneden før."""
+        today = datetime.now(DK).date()
+        if month:
+            try:
+                y, m = (int(x) for x in month.split("-"))
+                date(y, m, 1)
+            except ValueError:
+                raise BadRequest("maaned skal skrives som ÅÅÅÅ-MM") from None
+        else:
+            y, m = today.year, today.month
+        now = int(time.time())
+
+        def one(y, m):
+            t0 = local_midnight(date(y, m, 1))
+            t1 = local_midnight(date(y + (m == 12), m % 12 + 1, 1))
+            pm = self.price_model(t0, t1)
+            r = calc.insights(self.db.ev_intervals(t0, t1), pm, t0, t1, now, self.cfg)
+            r["maaned"] = f"{y:04d}-{m:02d}"
+            return r
+
+        py, pmn = (y, m - 1) if m > 1 else (y - 1, 12)
+        return {"denne": one(y, m), "forrige": one(py, pmn)}
 
     def api_summary(self, group="day", count=31):
         if group not in ("day", "month"):
@@ -381,7 +408,9 @@ def make_handler(app):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             routes = {
                 "/api/status": lambda: self._json(app.api_status()),
-                "/api/prices": lambda: self._json(app.api_prices(_float(q, "timer", 4, 0.25, 24))),
+                "/api/prices": lambda: self._json(app.api_prices(_float(q, "timer", 4, 0.25, 24),
+                                                                 _int(q, "dage_tilbage", 0, 0, 7))),
+                "/api/insights": lambda: self._json(app.api_insights(q.get("maaned"))),
                 "/api/summary": lambda: self._json(app.api_summary(
                     q.get("group", "day"), _int(q, "antal", 31, 1, 400))),
                 "/api/sessions": lambda: self._json(app.api_sessions(_int(q, "dage", 60, 1, 3650))),

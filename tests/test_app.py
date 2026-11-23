@@ -138,6 +138,19 @@ class AppTest(unittest.TestCase):
         self.assertTrue(all(r["abonnement_kr"] > 0 for r in days))
         self.assertTrue(self.get("/api/sessions?dage=60"))
 
+    def test_insights_and_house_estimate(self):
+        ins = self.get("/api/insights")
+        cur = ins["denne"]
+        self.assertGreater(cur["kwh"], 0)
+        self.assertAlmostEqual(cur["km"], cur["kwh"] / 18 * 100, delta=1)
+        self.assertAlmostEqual(cur["benzin_kr_pr_km"], 6 * 13.5 / 100)
+        self.assertTrue(0 <= cur["billig_andel"] <= 1)
+        self.assertEqual(self.get("/api/insights?maaned=2026-01")["forrige"]["maaned"], "2025-12")
+        self.assertEqual(self.req("/api/insights?maaned=jan")[0], 400)
+        self.assertIsNotNone(self.get("/api/status")["hus_typisk_kw"])
+        pr = self.get("/api/prices?dage_tilbage=1")
+        self.assertLess(pr["priser"][0]["t"], pr["i_dag"])
+
     def test_bad_query_params(self):
         for path in ("/api/summary?antal=x", "/api/summary?antal=0", "/api/summary?group=year",
                      "/api/prices?timer=100", "/api/export.csv?type=noget"):
@@ -204,7 +217,8 @@ class AppTest(unittest.TestCase):
         code, _, raw = self.req("/api/smart", {"mode": "now", "klar_kl": "06:30", "kwh": 20})
         self.assertEqual(code, 200, raw)
         st = json.loads(raw)
-        self.assertEqual(st["indstillinger"], {"mode": "now", "klar_kl": "06:30", "kwh": 20.0})
+        self.assertEqual(st["indstillinger"], {"mode": "now", "klar_kl": "06:30", "kwh": 20.0,
+                                                "maal_pct": None})
         app.car.charging = False
         v = {"vehicle_connected": True, "contactor_closed": False, "session_energy_wh": 0}
         app.after_vitals(v, int(time.time()))

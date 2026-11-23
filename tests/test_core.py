@@ -110,6 +110,23 @@ class CalcTest(unittest.TestCase):
         self.assertTrue(out[0]["elbil_estimeret"])
         self.assertAlmostEqual(out[0]["elbil_kwh"], 11.0, places=2)
 
+    def test_insights(self):
+        ev = [{"start": self.t0 + i * 900, "kwh": 2.75} for i in range(4)]  # billige kvarterer
+        cfg = {"consumption_kwh_per_100km": 20.0, "petrol_l_per_100km": 5.0, "petrol_price_kr_per_l": 14.0}
+        r = calc.insights(ev, self.pm, self.t0, self.t0 + 86400, self.t0 + 86400, cfg)
+        self.assertAlmostEqual(r["kwh"], 11.0)
+        self.assertEqual(r["billig_andel"], 1.0)
+        self.assertEqual(r["km"], 55)
+        self.assertAlmostEqual(r["benzin_kr_pr_km"], 0.7)
+        self.assertGreater(r["sparet_kr"], 0)  # ladet under døgnets snitpris
+
+    def test_typical_house_kw(self):
+        meter = [{"start": self.t0 + d * 86400 + 8 * 900, "seconds": 900, "kwh": 0.5 + 2.75 * (d == 0)}
+                 for d in range(3)]
+        ev = [{"start": self.t0 + 8 * 900, "kwh": 2.75}]
+        self.assertAlmostEqual(calc.typical_house_kw(meter, ev, self.t0 + 5 * 86400 + 8 * 900 + 60), 2.0)
+        self.assertIsNone(calc.typical_house_kw(meter, ev, self.t0 + 3600))
+
     def test_sessions_and_cheapest(self):
         ev = [{"start": self.t0 + (8 + i) * 900, "kwh": 2.75} for i in range(4)]  # dyre kvarterer
         s = calc.sessions(ev, self.pm)

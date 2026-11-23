@@ -16,15 +16,18 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2314161b'/%3E%3Cpath d='M18 4 8 18h7l-2 10 11-15h-7z' fill='%233987e5'/%3E%3C/svg%3E">
 <style>
 @font-face{font-family:"InterVar";src:url(vendor/inter-var.woff2) format("woff2");font-weight:100 900;font-display:swap}
+/* Baggrundens skær følger elprisen: koldt blåt når strømmen er billig, varmt når den er dyr */
+@property --mood{syntax:"<color>";inherits:true;initial-value:rgba(57,135,229,.16)}
 
 :root{
   color-scheme:light;
-  --bg:#f3f2ee; --glow1:rgba(42,120,214,.10); --glow2:rgba(217,122,20,.08);
-  --card:#ffffff; --card-hi:#ffffff; --raise:#f6f5f2;
+  --bg:#f3f2ee; --mood-cheap:rgba(42,120,214,.13); --mood-dear:rgba(217,122,20,.16); --glow2:rgba(17,19,23,.03);
+  --card:#ffffff; --card-hi:#ffffff; --raise:#f5f4f1; --glass:rgba(255,255,255,.78);
   --ink:#121317; --ink-2:#3f434c; --muted:#6b707b; --faint:#9a9ea7;
   --line:rgba(17,19,23,.08); --line-2:rgba(17,19,23,.14);
-  --ev:#2a78d6; --ev-glow:rgba(42,120,214,.28); --house:#d97a14;
+  --ev:#2a78d6; --ev-2:#6aa7ee; --ev-glow:rgba(42,120,214,.28); --house:#d97a14;
   --bar:#c9ccd3; --bar-past:rgba(150,155,165,.28);
+  --heat-lo:#ece9fb; --heat-hi:#4a3aa7;
   --good:#0a7d0a; --warn:#b26a00; --crit:#c53030;
   --shadow:0 1px 2px rgba(17,19,23,.04),0 12px 32px -12px rgba(17,19,23,.12);
   --tip:#121317; --tip-ink:#f3f4f6;
@@ -32,12 +35,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#0b0c0f; --glow1:rgba(57,135,229,.16); --glow2:rgba(196,125,28,.10);
-    --card:#14161b; --card-hi:#181b21; --raise:#1c1f26;
+    --bg:#0b0c0f; --mood-cheap:rgba(57,135,229,.18); --mood-dear:rgba(214,120,40,.16); --glow2:rgba(255,255,255,.025);
+    --card:#14161b; --card-hi:#181b21; --raise:#1c1f26; --glass:rgba(20,22,27,.78);
     --ink:#eef0f4; --ink-2:#c5c9d2; --muted:#8b92a0; --faint:#5d6370;
     --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
-    --ev:#3987e5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
+    --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
     --bar:#3c414c; --bar-past:rgba(90,96,108,.35);
+    --heat-lo:#25253a; --heat-hi:#b3abf5;
     --good:#3fbf5a; --warn:#fab219; --crit:#e66767;
     --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 20px 40px -20px rgba(0,0,0,.6);
     --tip:#f3f4f6; --tip-ink:#121317;
@@ -45,12 +49,13 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0b0c0f; --glow1:rgba(57,135,229,.16); --glow2:rgba(196,125,28,.10);
-  --card:#14161b; --card-hi:#181b21; --raise:#1c1f26;
+  --bg:#0b0c0f; --mood-cheap:rgba(57,135,229,.18); --mood-dear:rgba(214,120,40,.16); --glow2:rgba(255,255,255,.025);
+  --card:#14161b; --card-hi:#181b21; --raise:#1c1f26; --glass:rgba(20,22,27,.78);
   --ink:#eef0f4; --ink-2:#c5c9d2; --muted:#8b92a0; --faint:#5d6370;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
-  --ev:#3987e5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
+  --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
   --bar:#3c414c; --bar-past:rgba(90,96,108,.35);
+  --heat-lo:#25253a; --heat-hi:#b3abf5;
   --good:#3fbf5a; --warn:#fab219; --crit:#e66767;
   --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 20px 40px -20px rgba(0,0,0,.6);
   --tip:#f3f4f6; --tip-ink:#121317;
@@ -62,27 +67,42 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;color:var(--ink);
   font:15px/1.5 "InterVar",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   font-feature-settings:"cv11","ss01","tnum";-webkit-font-smoothing:antialiased;
-  background:radial-gradient(1100px 620px at 8% -12%,var(--glow1),transparent 62%),
-             radial-gradient(900px 520px at 105% -6%,var(--glow2),transparent 60%),var(--bg);
-  background-color:var(--bg);background-attachment:fixed}
+  --mood:var(--mood-cheap);
+  background:radial-gradient(1100px 640px at 12% -14%,var(--mood),transparent 62%),
+             radial-gradient(900px 520px at 100% -6%,var(--glow2),transparent 60%),var(--bg);
+  background-color:var(--bg);background-attachment:fixed;transition:--mood 2s ease}
 main{max-width:1180px;margin:0 auto;
-  padding:max(28px,calc(env(safe-area-inset-top) + 14px)) max(16px,env(safe-area-inset-right)) max(64px,calc(env(safe-area-inset-bottom) + 24px)) max(16px,env(safe-area-inset-left))}
+  padding:max(26px,calc(env(safe-area-inset-top) + 12px)) max(16px,env(safe-area-inset-right)) max(64px,calc(env(safe-area-inset-bottom) + 24px)) max(16px,env(safe-area-inset-left))}
 @media (display-mode: standalone){body{overscroll-behavior-y:none;-webkit-user-select:none;user-select:none}
   input,table{-webkit-user-select:text;user-select:text}}
 button,select,input{font:inherit;color:inherit}
 
-/* ---------- header ---------- */
-header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:28px}
-.brand{display:flex;gap:14px;align-items:center}
-.mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+/* ---------- header og faner ---------- */
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:22px}
+.brand{display:flex;gap:12px;align-items:center}
+.mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;
   background:linear-gradient(145deg,var(--card-hi),var(--card));border:1px solid var(--line-2);box-shadow:var(--shadow)}
 .mark svg{filter:drop-shadow(0 0 8px var(--ev-glow))}
-h1{font-size:21px;font-weight:600;letter-spacing:-.02em;margin:0}
-.tagline{color:var(--muted);font-size:13px}
-.hright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
+h1{font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0}
+.tagline{color:var(--muted);font-size:12.5px}
+.hright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:2px;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:4px;
+  backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)}
+.tabs button{display:flex;align-items:center;gap:7px;border:0;background:none;color:var(--muted);padding:7px 14px;border-radius:10px;
+  cursor:pointer;font-size:13.5px;font-weight:500;transition:background .2s,color .2s}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{background:var(--card-hi);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.18),0 0 0 1px var(--line-2)}
+.tabs button.on svg{color:var(--ev)}
+@media (max-width:760px){
+  main{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .tabs{position:fixed;z-index:20;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));
+    bottom:max(12px,env(safe-area-inset-bottom));justify-content:space-around;border-radius:20px;padding:6px;box-shadow:0 12px 32px -8px rgba(0,0,0,.45)}
+  .tabs button{flex-direction:column;gap:3px;font-size:10.5px;padding:7px 4px;flex:1;border-radius:14px}
+  .tabs button.on{box-shadow:none;background:color-mix(in srgb,var(--ev) 13%,transparent)}
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 18px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 70%,transparent);
-  border-radius:99px;padding:4px 10px;font-size:12px;color:var(--ink-2);backdrop-filter:blur(8px)}
+  border-radius:99px;padding:3px 10px;font-size:11.5px;color:var(--ink-2)}
 .chip .d{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 20%,transparent)}
 .chip.bad .d{background:var(--crit);box-shadow:0 0 0 3px color-mix(in srgb,var(--crit) 20%,transparent)}
 .chip.demo{color:var(--house);border-color:color-mix(in srgb,var(--house) 35%,transparent)}
@@ -91,18 +111,21 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.02em;margin:0}
 .iconbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer;color:var(--ink-2)}
 .iconbtn:hover{border-color:var(--line-2);color:var(--ink)}
 
-/* ---------- cards ---------- */
+.view{animation:enter .35s ease both}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}}
+
+/* ---------- kort ---------- */
 .grid{display:grid;gap:16px;margin-bottom:16px}
-.g3{grid-template-columns:1.15fr 1fr 1fr}
-.g-kpi{grid-template-columns:repeat(3,1fr)}
-@media (max-width:900px){.g3,.g-kpi{grid-template-columns:1fr 1fr}.g3>:first-child{grid-column:1/-1}}
-@media (max-width:620px){.g3,.g-kpi{grid-template-columns:1fr}}
+.g2{grid-template-columns:1.25fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:900px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr}.g3>:first-child{grid-column:1/-1}}
+@media (max-width:620px){.g3{grid-template-columns:1fr}}
 .card{position:relative;background:linear-gradient(180deg,var(--card-hi),var(--card));border:1px solid var(--line);
-  border-radius:22px;padding:22px;box-shadow:var(--shadow);min-width:0}
+  border-radius:24px;padding:22px;box-shadow:var(--shadow);min-width:0}
 .card.wide{margin-bottom:16px}
 .label{font-size:11px;font-weight:550;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.hero{font-size:54px;font-weight:280;letter-spacing:-.045em;line-height:1.02;margin:10px 0 4px;font-variant-numeric:tabular-nums}
-.hero small{font-size:16px;font-weight:450;letter-spacing:0;color:var(--muted);margin-left:6px}
+.hero{font-size:60px;font-weight:250;letter-spacing:-.05em;line-height:1;margin:10px 0 6px;font-variant-numeric:tabular-nums}
+.hero small{font-size:18px;font-weight:450;letter-spacing:0;color:var(--muted);margin-left:6px}
 .big{font-size:34px;font-weight:300;letter-spacing:-.035em;line-height:1.1;margin:8px 0 4px;font-variant-numeric:tabular-nums}
 .big small{font-size:14px;font-weight:450;letter-spacing:0;color:var(--muted);margin-left:4px}
 .sub{color:var(--muted);font-size:13px}
@@ -112,29 +135,35 @@ h2{font-size:17px;font-weight:600;letter-spacing:-.015em;margin:0}
 .head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
 .head .sub{margin-top:2px}
 
-/* pris nu */
-.pricecard{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
-.parts{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.part{display:grid;gap:2px;font-size:11px;color:var(--muted)}
-.part b{font-size:14px;font-weight:450;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.spark{width:100%;height:76px;display:block}
-.sparkcap{font-size:11px;color:var(--faint);margin-top:4px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ---------- Nu ---------- */
+.greet{margin:4px 0 20px}
+.headline{font-size:clamp(24px,4vw,34px);font-weight:300;letter-spacing:-.03em;line-height:1.18;margin:6px 0 0;max-width:820px}
+.headline b{font-weight:550}
+.carcard{display:grid;gap:8px;align-content:start;overflow:hidden}
+.carcard::after{content:"";position:absolute;inset:auto -20% -60% 30%;height:120%;pointer-events:none;
+  background:radial-gradient(closest-side,var(--ev-glow),transparent);opacity:.0;transition:opacity 1s}
+.carcard.charging::after{opacity:.35}
+.battery{width:100%;max-width:440px;margin:8px 0 4px}
+.battery svg{width:100%;height:auto;display:block;overflow:visible}
+.carstats{display:flex;gap:26px;flex-wrap:wrap;margin-top:4px}
+.carstats div{display:grid;gap:1px}
+.carstats span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:550}
+.carstats b{font-size:17px;font-weight:450;font-variant-numeric:tabular-nums}
+.flow svg{width:100%;height:auto;display:block;max-height:260px}
+.flow .path-bg{fill:none;stroke:var(--line-2);stroke-width:2}
+.flow .path{fill:none;stroke-width:3;stroke-linecap:round;stroke-dasharray:1.5 11;animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-25}}
+.flow .node{fill:var(--raise);stroke:var(--line-2);stroke-width:1.5}
+.flow text{fill:var(--ink);font-size:13px;font-weight:550;font-family:inherit}
+.flow text.s{fill:var(--muted);font-size:11px;font-weight:450}
+.level{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:550;border-radius:99px;padding:3px 10px;margin-left:2px}
+.level.cheap{color:var(--good);background:color-mix(in srgb,var(--good) 13%,transparent)}
+.level.mid{color:var(--ink-2);background:var(--raise)}
+.level.dear{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.spark{width:100%;height:70px;display:block;margin-top:12px}
+.sparkcap{font-size:11px;color:var(--faint);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* wall connector */
-.wc{display:flex;gap:18px;align-items:center}
-.ringwrap{position:relative;width:104px;height:104px;flex:none}
-.ringwrap svg{width:100%;height:100%;transform:rotate(-90deg)}
-.ringwrap .c{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-.ringwrap .c b{font-size:24px;font-weight:350;letter-spacing:-.03em;display:block;line-height:1}
-.ringwrap .c span{font-size:11px;color:var(--muted)}
-.ringwrap.on svg .arc{filter:drop-shadow(0 0 6px var(--ev-glow));animation:pulse 2.4s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.75}}
-.state{font-size:20px;font-weight:500;letter-spacing:-.02em;margin:6px 0 8px}
-.kv{display:grid;gap:4px}
-.kv div{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);white-space:nowrap}
-.kv div span:last-child{color:var(--ink-2);font-variant-numeric:tabular-nums}
-
-/* segmented */
+/* segmenter og knapper */
 .seg{display:inline-flex;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
 .seg button{border:0;background:none;color:var(--muted);padding:6px 14px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;transition:background .15s,color .15s}
 .seg button:hover{color:var(--ink)}
@@ -146,44 +175,90 @@ h2{font-size:17px;font-weight:600;letter-spacing:-.015em;margin:0}
 .btn.primary{background:var(--ev);border-color:transparent;color:#fff;box-shadow:0 6px 18px -6px var(--ev-glow)}
 .btn:disabled{opacity:.5;cursor:default}
 
-/* smart */
+/* ---------- Plan ---------- */
 .smart{display:grid;grid-template-columns:1fr 300px;gap:28px}
 @media (max-width:820px){.smart{grid-template-columns:1fr}}
-.planhead{font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1.2;margin:8px 0 6px;font-variant-numeric:tabular-nums}
+@media (max-width:620px){.planhead{font-size:24px}.hero{font-size:52px}}
+.planhead{font-size:30px;font-weight:300;letter-spacing:-.03em;line-height:1.2;margin:8px 0 6px;font-variant-numeric:tabular-nums}
 .saving{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:550;color:var(--good);
-  background:color-mix(in srgb,var(--good) 12%,transparent);border-radius:99px;padding:3px 10px;margin-top:6px}
-.timeline{margin-top:20px}
-.tl-track{position:relative;height:14px;border-radius:8px;background:var(--raise);border:1px solid var(--line);overflow:hidden}
-.tl-seg{position:absolute;top:0;bottom:0;background:var(--ev);border-radius:3px;box-shadow:0 0 12px var(--ev-glow)}
-.tl-seg.est{background:repeating-linear-gradient(45deg,var(--ev) 0 4px,color-mix(in srgb,var(--ev) 55%,transparent) 4px 8px)}
-.tl-ticks{position:relative;height:18px;margin-top:6px;font-size:11px;color:var(--faint)}
+  background:color-mix(in srgb,var(--good) 12%,transparent);border-radius:99px;padding:3px 10px;margin-top:8px}
+.timeline{margin-top:26px;user-select:none;-webkit-user-select:none;touch-action:none}
+.tl-track{position:relative;height:40px;border-radius:12px;background:var(--raise);border:1px solid var(--line);cursor:pointer}
+.tl-seg{position:absolute;top:8px;bottom:8px;background:linear-gradient(180deg,var(--ev-2),var(--ev));border-radius:6px;box-shadow:0 0 14px var(--ev-glow)}
+.tl-seg.est{background:repeating-linear-gradient(45deg,var(--ev) 0 4px,color-mix(in srgb,var(--ev) 50%,transparent) 4px 8px)}
+.tl-after{position:absolute;top:0;bottom:0;right:0;border-radius:0 12px 12px 0;
+  background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--ink) 5%,transparent) 6px 7px)}
+.tl-handle{position:absolute;top:-8px;bottom:-8px;width:4px;margin-left:-2px;background:var(--ink);border-radius:3px;cursor:ew-resize}
+.tl-handle::before{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);
+  border-radius:50%;background:var(--card-hi);border:2px solid var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.tl-handle span{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;
+  font-size:11.5px;font-weight:600;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:7px}
+.tl-handle.drag span{background:var(--ev);color:#fff}
+.tl-ticks{position:relative;height:18px;margin-top:8px;font-size:11px;color:var(--faint)}
 .tl-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .tl-ticks span:first-child{transform:none}
-.tl-ticks span.end{transform:translateX(-100%);color:var(--ink-2)}
-.panel{background:var(--raise);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:14px;align-content:start}
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fields label{display:grid;gap:5px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:550}
-.fields input{width:100%;background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:8px 10px;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
-.fields input:focus{outline:2px solid color-mix(in srgb,var(--ev) 55%,transparent);outline-offset:1px}
+.tl-hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.panel{background:var(--raise);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:16px;align-content:start}
+.field{display:grid;gap:8px}
+.field .row{display:flex;justify-content:space-between;align-items:baseline}
+.field .row b{font-size:22px;font-weight:350;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.field label,.flabel{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:550}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:
+  linear-gradient(90deg,var(--ev) 0 var(--p,50%),var(--line-2) var(--p,50%));outline:none;margin:6px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--card-hi);
+  border:2px solid var(--ev);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--card-hi);border:2px solid var(--ev);cursor:pointer}
+input[type=time]{background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:7px 10px;font-size:15px;color:var(--ink)}
+.scale{display:flex;justify-content:space-between;font-size:11px;color:var(--faint)}
 .status{font-size:12px;color:var(--muted);line-height:1.55}
 .log{list-style:none;margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--muted)}
 .log b{font-weight:500;color:var(--ink-2);margin-right:6px;font-variant-numeric:tabular-nums}
 
-/* charts */
+/* ---------- Priser ---------- */
+.fc{position:relative}
+.fc-row{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:center;margin-bottom:10px}
+@media (max-width:620px){.fc-row{grid-template-columns:1fr;gap:6px}}
+.fc-lab b{display:block;font-size:14px;font-weight:600}
+.fc-lab span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+@media (max-width:620px){.fc-lab{display:flex;gap:10px;align-items:baseline}.fc-lab span{display:inline}
+  .fc-cells{gap:0;height:40px}}
+.fc-cells{position:relative;display:grid;grid-template-columns:repeat(96,1fr);gap:1px;height:46px;border-radius:10px;overflow:hidden;cursor:crosshair}
+.fc-cells i{display:block;min-width:0}
+.fc-cells i.past{opacity:.45}
+.fc-cells i.pl{box-shadow:inset 0 -5px 0 var(--ev)}
+.fc-cells .now{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink);box-shadow:0 0 0 1px var(--card)}
+.fc-empty{height:46px;border-radius:10px;border:1px dashed var(--line-2);display:grid;place-items:center;font-size:12.5px;color:var(--muted)}
+.fc-axis{display:grid;grid-template-columns:118px 1fr;gap:14px;font-size:11px;color:var(--faint)}
+.fc-axis div{display:flex;justify-content:space-between}
+@media (max-width:620px){.fc-axis{grid-template-columns:1fr}.fc-axis>span{display:none}}
+.ramp{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.ramp i{display:block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--heat-lo),var(--heat-hi))}
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--tip);color:var(--tip-ink);border-radius:10px;padding:8px 11px;font-size:12px;
+  line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.35);transform:translate(-50%,calc(-100% - 12px));white-space:nowrap}
+.tip b{font-weight:600}
+.parts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:620px){.parts{grid-template-columns:1fr 1fr}}
+.part{display:grid;gap:4px;font-size:11.5px;color:var(--muted)}
+.part b{font-size:20px;font-weight:350;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.part .bar{height:4px;border-radius:4px;background:var(--line)}
+.part .bar i{display:block;height:100%;border-radius:4px;background:var(--ink-2);opacity:.5}
 .chart{position:relative;height:280px}
 .legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 
-/* kpi */
+/* ---------- Historik ---------- */
 .kpi .big{display:flex;align-items:center;gap:10px}
 .kpi .dot{width:10px;height:10px;border-radius:3px;flex:none}
 .delta{font-size:12px;color:var(--muted);margin-top:6px}
+.compare{display:grid;gap:8px;margin-top:14px}
+.compare div{display:grid;grid-template-columns:64px 1fr 66px;gap:10px;align-items:center;font-size:12px;color:var(--muted)}
+.compare .tr{height:8px;border-radius:5px;background:var(--line)}
+.compare .tr i{display:block;height:100%;border-radius:5px}
+.compare b{font-weight:500;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
 .donutcard{display:flex;gap:18px;align-items:center}
 .donut{width:96px;height:96px;flex:none;position:relative}
 .donut svg{width:100%;height:100%;transform:rotate(-90deg)}
 .donut .c{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:350;letter-spacing:-.03em}
-
-/* tables */
 .scroll{overflow-x:auto;margin:0 -6px}
 table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 th,td{text-align:right;padding:10px 6px;white-space:nowrap}
@@ -201,8 +276,6 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
   border-radius:16px;padding:12px 16px;margin-bottom:16px;font-size:13px;display:none}
 .errors div+div{margin-top:4px}
 footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
-
-/* skelet mens data hentes */
 .skel{color:transparent!important;background:linear-gradient(90deg,var(--raise),var(--line),var(--raise));background-size:200% 100%;
   border-radius:8px;animation:sk 1.4s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
@@ -214,145 +287,177 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 <header>
   <div class="brand">
     <div class="mark" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24"><path d="M13.5 2 4 14h6.5L9 22l11-13.2h-6.6z" fill="var(--ev)"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M13.5 2 4 14h6.5L9 22l11-13.2h-6.6z" fill="var(--ev)"/></svg>
     </div>
     <div>
       <h1>Elopladning</h1>
-      <div class="tagline">Elbilens opladning adskilt fra husets forbrug – med live elpriser</div>
+      <div class="tagline">Elbil og hus – med live elpriser</div>
     </div>
   </div>
+  <nav class="tabs" id="tabs" aria-label="Sider">
+    <button data-tab="nu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13.5 2 4 14h6.5L9 22l11-13.2h-6.6z"/></svg>Nu</button>
+    <button data-tab="plan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Plan</button>
+    <button data-tab="priser"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M9 20V4M14 20v-7M19 20V8"/></svg>Priser</button>
+    <button data-tab="historik"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2"/></svg>Historik</button>
+  </nav>
   <div class="hright">
-    <div class="chips" id="chips"></div>
     <button class="btn primary" id="installBtn" hidden>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>Installér app</button>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>Installér</button>
     <button class="iconbtn" id="themeBtn" title="Skift lyst/mørkt tema" aria-label="Skift tema">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
   </div>
 </header>
-
+<div class="chips" id="chips"></div>
 <div class="errors" id="errors" role="status"></div>
 
-<section class="grid g3">
-  <div class="card">
-    <div class="label">Elpris lige nu</div>
-    <div class="pricecard">
+<!-- ======================= NU ======================= -->
+<section class="view" id="view-nu">
+  <div class="greet">
+    <div class="label" id="greet">Hej</div>
+    <p class="headline" id="headline"><span class="skel">Henter status …</span></p>
+  </div>
+  <div class="grid g2">
+    <div class="card carcard" id="carCard">
+      <div class="label" id="carLabel">Bilen</div>
+      <div class="battery" id="battery"></div>
+      <div class="carstats" id="carStats"></div>
+    </div>
+    <div class="card flow">
+      <div class="head" style="margin-bottom:6px"><div class="label">Energi lige nu</div><span class="sub" id="flowNote"></span></div>
+      <div id="flow"></div>
+    </div>
+  </div>
+  <div class="grid g3">
+    <div class="card">
+      <div class="label">Elpris lige nu</div>
+      <div class="hero"><span id="priceNow">–</span><small>kr/kWh</small></div>
+      <span class="level mid" id="priceLevel">–</span>
+      <svg class="spark" id="spark" viewBox="0 0 300 70" preserveAspectRatio="none" aria-label="Elpris de næste 24 timer"></svg>
+      <div class="sparkcap" id="sparkCap"></div>
+    </div>
+    <div class="card">
+      <div class="label">Billigste tidspunkt at lade</div>
+      <div class="big" id="cheapTime">–</div>
+      <div class="sub" id="cheapSub"></div>
+      <div style="margin-top:16px">
+        <div class="seg small" id="hoursSeg" role="group" aria-label="Ladetid">
+          <button data-h="2">2 t</button><button data-h="3">3 t</button><button data-h="4" class="on">4 t</button><button data-h="6">6 t</button>
+        </div>
+        <div class="sub" style="margin-top:8px" id="hoursSub">≈ 44 kWh ved 11 kW</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Elbilen denne måned</div>
+      <div class="big"><span id="monthKr">–</span><small>kr</small></div>
+      <div class="sub" id="monthSub"></div>
+      <div class="compare" id="nuCompare"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PLAN ======================= -->
+<section class="view" id="view-plan" hidden>
+  <section class="card wide">
+    <div class="head">
+      <div><h2>Smart opladning</h2><div class="sub">Lad i de billigste kvarterer – og vær klar til tiden</div></div>
+      <div class="seg" id="modeSeg" role="group" aria-label="Tilstand">
+        <button data-m="off">Fra</button><button data-m="smart">Smart</button><button data-m="now">Lad nu</button>
+      </div>
+    </div>
+    <div class="smart">
       <div>
-        <div class="hero" id="priceNow"><span class="skel">0,00</span></div>
-        <div class="sub">kr/kWh inkl. alt</div>
+        <div class="label" id="smartLabel">Plan</div>
+        <div class="planhead" id="smartHead">–</div>
+        <div class="sub" id="smartSub"></div>
+        <div id="smartSaving"></div>
+        <div class="timeline" id="timeline"></div>
+        <div class="tl-hint">Træk i håndtaget for at vælge, hvornår bilen skal være klar.</div>
       </div>
-      <div style="min-width:0">
-        <svg class="spark" id="spark" viewBox="0 0 300 76" preserveAspectRatio="none" aria-label="Elpris de næste 24 timer"></svg>
-        <div class="sparkcap" id="sparkCap"></div>
-      </div>
+      <form class="panel" id="smartForm">
+        <div class="field">
+          <div class="row"><label for="targetRange" id="targetLabel">Mål</label><b id="targetVal">–</b></div>
+          <input type="range" id="targetRange" min="50" max="100" step="5">
+          <div class="scale" id="targetScale"><span>50 %</span><span>100 %</span></div>
+        </div>
+        <div class="field">
+          <div class="row"><label for="smartReady">Klar kl.</label><input type="time" id="smartReady" step="900" required></div>
+        </div>
+        <div class="status" id="smartStatus"></div>
+      </form>
     </div>
+    <ul class="log" id="smartLog"></ul>
+  </section>
+</section>
+
+<!-- ======================= PRISER ======================= -->
+<section class="view" id="view-priser" hidden>
+  <section class="card wide">
+    <div class="head">
+      <div><h2>Elprisen som vejrudsigt</h2><div class="sub">Hvert felt er et kvarter – jo mørkere/stærkere, jo dyrere</div></div>
+      <div class="hright"><div class="ramp"><span id="rampLo">–</span><i></i><span id="rampHi">–</span></div>
+        <div class="legend"><span><i style="background:var(--ev)"></i>Smart-plan</span></div></div>
+    </div>
+    <div class="fc" id="forecast"></div>
+  </section>
+  <section class="card wide">
+    <div class="head"><div><h2>Hvad består prisen af lige nu?</h2><div class="sub">kr/kWh – total <span class="ink2" id="partsTotal">–</span></div></div></div>
     <div class="parts" id="priceParts"></div>
-  </div>
-
-  <div class="card">
-    <div class="label">Wall Connector</div>
-    <div class="wc" style="margin-top:12px">
-      <div class="ringwrap" id="wcRing"></div>
-      <div style="min-width:0;flex:1">
-        <div class="state" id="wcState">–</div>
-        <div class="kv" id="wcRows"></div>
-      </div>
+  </section>
+  <section class="card wide">
+    <div class="head">
+      <div><h2>Kvartersprisen i detaljer</h2><div class="sub">I dag og i morgen, inkl. tariffer, afgifter og moms</div></div>
+      <div class="legend" id="priceLegend"></div>
     </div>
-  </div>
-
-  <div class="card">
-    <div class="label">Billigste tidspunkt at lade</div>
-    <div class="big" id="cheapTime">–</div>
-    <div class="sub" id="cheapSub"></div>
-    <div style="margin-top:16px">
-      <div class="seg small" id="hoursSeg" role="group" aria-label="Ladetid">
-        <button data-h="2">2 t</button><button data-h="3">3 t</button><button data-h="4" class="on">4 t</button><button data-h="6">6 t</button>
-      </div>
-      <div class="sub" style="margin-top:8px" id="hoursSub">≈ 44 kWh ved 11 kW</div>
-    </div>
-  </div>
+    <div class="chart"><canvas id="priceChart" aria-label="Elpris pr. kvarter"></canvas></div>
+  </section>
 </section>
 
-<section class="card wide" id="smart">
-  <div class="head">
-    <div><h2>Smart opladning</h2><div class="sub">Lad i de billigste kvarterer – og vær klar til tiden</div></div>
-    <div class="seg" id="modeSeg" role="group" aria-label="Tilstand">
-      <button data-m="off">Fra</button><button data-m="smart">Smart</button><button data-m="now">Lad nu</button>
-    </div>
-  </div>
-  <div class="smart">
-    <div>
-      <div class="label" id="smartLabel">Plan</div>
-      <div class="planhead" id="smartHead">–</div>
-      <div class="sub" id="smartSub"></div>
-      <div id="smartSaving"></div>
-      <div class="timeline" id="timeline"></div>
-    </div>
-    <form class="panel" id="smartForm">
-      <div class="fields">
-        <label>Klar kl.<input type="time" id="smartReady" required></label>
-        <label id="kwhLabel">Energi, kWh<input type="number" id="smartKwh" min="1" max="150" step="1" required></label>
+<!-- ======================= HISTORIK ======================= -->
+<section class="view" id="view-historik" hidden>
+  <section class="grid g3" id="insights"></section>
+  <section class="grid g3" id="totals"></section>
+  <section class="card wide">
+    <div class="head">
+      <div><h2>Omkostning</h2><div class="sub">Elbil og hus, beregnet kvarter for kvarter</div></div>
+      <div class="hright">
+        <div class="legend"><span><i style="background:var(--ev)"></i>Elbil</span><span><i style="background:var(--house)"></i>Hus</span></div>
+        <div class="seg small" id="groupSeg"><button data-g="day" class="on">Dage</button><button data-g="month">Måneder</button></div>
+        <a class="btn" id="exportPeriods" href="/api/export.csv?type=perioder&group=day&antal=31" download>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 21h16"/></svg>CSV</a>
       </div>
-      <button class="btn primary" type="submit" style="justify-content:center">Gem plan</button>
-      <div class="status" id="smartStatus"></div>
-    </form>
-  </div>
-  <ul class="log" id="smartLog"></ul>
-</section>
-
-<section class="card wide">
-  <div class="head">
-    <div><h2>Elpris i dag og i morgen</h2><div class="sub">kr/kWh pr. kvarter, inkl. tariffer, afgifter og moms</div></div>
-    <div class="legend" id="priceLegend"></div>
-  </div>
-  <div class="chart"><canvas id="priceChart" aria-label="Elpris pr. kvarter"></canvas></div>
-</section>
-
-<section class="grid g-kpi" id="totals"></section>
-
-<section class="card wide">
-  <div class="head">
-    <div><h2>Omkostning</h2><div class="sub">Elbil og hus, beregnet kvarter for kvarter</div></div>
+    </div>
+    <div class="chart"><canvas id="costChart" aria-label="Omkostning pr. periode"></canvas></div>
+    <div class="scroll" style="margin-top:18px"><table id="costTable"></table></div>
+    <div class="more"><button class="btn" id="costMore" hidden></button></div>
+    <div class="note">Husets forbrug kommer fra Eloverblik, typisk med 1–2 døgns forsinkelse. Elbilens opladning måles live af Wall Connectoren. ≈ betyder at elbilens andel er skønnet ud fra måleren (før Wall Connector-logningen startede).</div>
+  </section>
+  <section class="card wide">
+    <div class="head">
+      <div><h2>Ladesessioner</h2><div class="sub">Pris – og hvad den samme strøm kunne have kostet</div></div>
+      <a class="btn" href="/api/export.csv?type=sessioner&dage=365" download>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 21h16"/></svg>CSV · 1 år</a>
+    </div>
+    <div class="scroll"><table id="sessTable"></table></div>
+    <div class="more"><button class="btn" id="sessMore" hidden></button></div>
+    <div class="note">"Billigst mulige" er prisen, hvis den samme mængde strøm var ladet i de billigste kvarterer inden for 14 timer efter tilslutning.</div>
+  </section>
+  <footer>
+    <span class="sub" id="footer"></span>
     <div class="hright">
-      <div class="legend"><span><i style="background:var(--ev)"></i>Elbil</span><span><i style="background:var(--house)"></i>Hus</span></div>
-      <div class="seg small" id="groupSeg">
-        <button data-g="day" class="on">Dage</button><button data-g="month">Måneder</button>
-      </div>
-      <a class="btn" id="exportPeriods" href="/api/export.csv?type=perioder&group=day&antal=31" download>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 21h16"/></svg>CSV</a>
+      <button class="btn" id="notifyBtn" hidden>Send testnotifikation</button>
+      <button class="btn" id="syncBtn">Hent nye data</button>
     </div>
-  </div>
-  <div class="chart"><canvas id="costChart" aria-label="Omkostning pr. periode"></canvas></div>
-  <div class="scroll" style="margin-top:18px"><table id="costTable"></table></div>
-  <div class="more"><button class="btn" id="costMore" hidden></button></div>
-  <div class="note">Husets forbrug kommer fra Eloverblik, typisk med 1–2 døgns forsinkelse. Elbilens opladning måles live af Wall Connectoren. ≈ betyder at elbilens andel er skønnet ud fra måleren (før Wall Connector-logningen startede).</div>
+  </footer>
 </section>
-
-<section class="card wide">
-  <div class="head">
-    <div><h2>Ladesessioner</h2><div class="sub">Pris – og hvad den samme strøm kunne have kostet</div></div>
-    <a class="btn" href="/api/export.csv?type=sessioner&dage=365" download>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 21h16"/></svg>CSV · 1 år</a>
-  </div>
-  <div class="scroll"><table id="sessTable"></table></div>
-  <div class="more"><button class="btn" id="sessMore" hidden></button></div>
-  <div class="note">"Billigst mulige" er prisen, hvis den samme mængde strøm var ladet i de billigste kvarterer inden for 14 timer efter tilslutning.</div>
-</section>
-
-<footer>
-  <span class="sub" id="footer"></span>
-  <div class="hright">
-    <button class="btn" id="notifyBtn" hidden>Send testnotifikation</button>
-    <button class="btn" id="syncBtn">Hent nye data</button>
-  </div>
-</footer>
 </main>
+<div class="tip" id="tip" hidden></div>
 
 <script src="vendor/chart.umd.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const kr = (v, d=2) => v == null || isNaN(v) ? "–" : v.toLocaleString("da-DK",{minimumFractionDigits:d,maximumFractionDigits:d});
+const kr = (v, d=2) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("da-DK",{minimumFractionDigits:d,maximumFractionDigits:d});
 // Alle tider vises i dansk tid, uanset hvilken tidszone browseren står i
 const TZ = "Europe/Copenhagen";
 const fmtTime = t => new Date(t*1000).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit",timeZone:TZ});
@@ -360,12 +465,20 @@ const fmtDay = t => new Date(t*1000).toLocaleDateString("da-DK",{weekday:"short"
 const dayKey = t => new Date(t*1000).toLocaleDateString("sv-SE",{timeZone:TZ});
 const hourFmt = new Intl.DateTimeFormat("en-GB",{hour:"2-digit",hourCycle:"h23",timeZone:TZ});
 const hourOf = t => Number(hourFmt.format(new Date(t*1000)));
+const minOf = t => Math.floor(t / 60) % 60;          // danske tidszoner skifter i hele timer
 const isHour = t => t % 3600 === 0;
+const hhmm = t => String(hourOf(t)).padStart(2,"0") + ":" + String(minOf(t)).padStart(2,"0");
 const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtRange = ([a,b]) => `${fmtTime(a)}–${fmtTime(b)}`;
-let group = "day", hours = 4, chargeKw = 11, priceChart, costChart, lastPrices = null;
+const nowS = () => Math.floor(Date.now()/1000);
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let group = "day", hours = 4, chargeKw = 11, priceChart, costChart;
+const PC = {pts: [], plan: new Set()};  // data bag prisgrafen (bruges af tooltips og akse)
+const S = {status:null, smart:null, prices:null, insights:null};
 const expanded = {cost:false, sess:false};
 
+/* ---------- netværk ---------- */
 let offlineSince = null;
 async function j(url, opt){
   const r = await fetch(url, opt);
@@ -380,6 +493,34 @@ async function j(url, opt){
 const post = (url, body) => j(url, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body || {})});
 const safe = f => (...a) => f(...a).catch(e => console.warn(e));
 
+/* ---------- tal der tæller op ---------- */
+function countTo(el, v, d=0){
+  if(!el) return;
+  if(v == null || isNaN(v)){ el.textContent = "–"; delete el.dataset.v; return; }
+  const from = el.dataset.v != null ? parseFloat(el.dataset.v) : (reduceMotion ? v : 0);
+  el.dataset.v = v;
+  cancelAnimationFrame(el._raf);
+  if(reduceMotion || Math.abs(from - v) < 1e-9){ el.textContent = kr(v,d); return; }
+  const t0 = performance.now(), dur = 800;
+  const step = now => { const k = Math.min((now-t0)/dur, 1), e = 1 - Math.pow(1-k, 3);
+    el.textContent = kr(from + (v-from)*e, d); if(k < 1) el._raf = requestAnimationFrame(step); };
+  el._raf = requestAnimationFrame(step);
+}
+
+/* ---------- faner ---------- */
+const TABS = ["nu","plan","priser","historik"];
+function showTab(t, scroll=true){
+  if(t === "smart") t = "plan";
+  if(!TABS.includes(t)) t = "nu";
+  TABS.forEach(x => $("view-"+x).hidden = x !== t);
+  [...$("tabs").children].forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  if(location.hash !== "#"+t) history.replaceState(null, "", "#"+t);
+  if(scroll) window.scrollTo({top:0});
+  requestAnimationFrame(() => { priceChart?.resize(); costChart?.resize(); if(t === "plan") renderSmart(); });
+}
+$("tabs").addEventListener("click", e => { const t = e.target.closest("button")?.dataset.tab; if(t) showTab(t); });
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
+
 /* ---------- tema ---------- */
 function applyTheme(t){
   if(t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
@@ -393,68 +534,74 @@ $("themeBtn").addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   try { localStorage.setItem("tema", next); } catch(e){}
-  applyTheme(next); safe(loadPrices)(); safe(loadSummary)();
+  applyTheme(next); renderPrices(); loadSummary(); renderMood();
 });
-
 function chartDefaults(){
   Chart.defaults.color = css("--muted");
   Chart.defaults.borderColor = css("--line");
   Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
   Chart.defaults.font.size = 11;
   Object.assign(Chart.defaults.plugins.tooltip, {
-    backgroundColor: css("--tip"), titleColor: css("--tip-ink"), bodyColor: css("--tip-ink"),
+    backgroundColor: css("--tip"), titleColor: css("--tip-ink"), bodyColor: css("--tip-ink"), footerColor: css("--tip-ink"),
     padding: 12, cornerRadius: 12, caretSize: 0, displayColors: true, usePointStyle: true,
     boxPadding: 6, titleFont:{weight:"600", size:12}, bodyFont:{size:12}
   });
 }
 
-/* ---------- små SVG-figurer ---------- */
-function ringSVG(frac, on){
-  const r = 52, C = 2*Math.PI*r, f = Math.max(0, Math.min(1, frac));
-  return `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--line-2)" stroke-width="8"/>
-    <circle class="arc" cx="60" cy="60" r="${r}" fill="none" stroke="var(--ev)" stroke-width="8" stroke-linecap="round"
-      stroke-dasharray="${(C*f).toFixed(1)} ${C.toFixed(1)}" ${f ? "" : 'opacity="0"'}/></svg>`;
-}
-function donutSVG(frac){
-  const r = 40, C = 2*Math.PI*r, gap = frac > 0 && frac < 1 ? 3 : 0;
-  const a = Math.max(C*frac - gap, 0), b = Math.max(C*(1-frac) - gap, 0);
-  return `<svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--house)" stroke-width="10"
-      stroke-dasharray="${b} ${C}" stroke-dashoffset="${-(C*frac)}"/>
-    <circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--ev)" stroke-width="10" stroke-dasharray="${a} ${C}"/></svg>`;
+/* ---------- SVG-figurer ---------- */
+function batterySVG(frac, target, charging, label){
+  const f = Math.max(0, Math.min(1, frac || 0)), W = 252, x0 = 12;
+  const tx = target != null ? x0 + W * Math.max(0, Math.min(1, target)) : null;
+  return `<svg viewBox="0 0 300 124" role="img" aria-label="${esc(label)}">
+    <defs>
+      <linearGradient id="bf" x1="0" x2="1"><stop offset="0" stop-color="var(--ev)"/><stop offset="1" stop-color="var(--ev-2)"/></linearGradient>
+      <linearGradient id="sh" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <clipPath id="bc"><rect x="${x0}" y="26" width="${(W*f).toFixed(1)}" height="76" rx="11"/></clipPath>
+    </defs>
+    <rect x="4" y="18" width="268" height="92" rx="20" fill="var(--raise)" stroke="var(--line-2)" stroke-width="2.5"/>
+    <rect x="276" y="46" width="12" height="36" rx="5" fill="var(--line-2)"/>
+    <rect x="${x0}" y="26" width="${(W*f).toFixed(1)}" height="76" rx="11" fill="url(#bf)" style="filter:drop-shadow(0 0 10px var(--ev-glow))"/>
+    ${charging ? `<g clip-path="url(#bc)"><rect y="26" width="70" height="76" fill="url(#sh)">
+      <animate attributeName="x" from="-70" to="${x0 + W}" dur="1.8s" repeatCount="indefinite"/></rect></g>` : ""}
+    ${tx != null ? `<line x1="${tx}" x2="${tx}" y1="12" y2="116" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 4" opacity=".7"/>
+      <text x="${tx}" y="8" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-2)">MÅL ${Math.round(target*100)} %</text>` : ""}
+  </svg>`;
 }
 
-/* ---------- status ---------- */
+function flowSVG(houseKw, carKw, estHouse){
+  const ICON = {
+    grid: "M12 2 7 22M12 2l5 20M8.6 9h6.8M7.7 14h8.6M5 22h14",
+    house: "M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20",
+    car: "M4 16.5V13l2.2-5h11.6L20 13v3.5M4 16.5h16M6.5 16.5V19M17.5 16.5V19M7.5 12.8h.01M16.5 12.8h.01"
+  };
+  const node = (x, y, icon, color, name, val) => `
+    <circle class="node" cx="${x}" cy="${y}" r="27"/>
+    <g transform="translate(${x-12} ${y-12})" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${icon}"/></g>
+    <text x="${x}" y="${y+46}" text-anchor="middle">${val}</text><text class="s" x="${x}" y="${y+61}" text-anchor="middle">${name}</text>`;
+  const speed = kw => (1.8 / Math.max(0.35, Math.min(kw, 11) ** .5)).toFixed(2) + "s";
+  const pathH = "M100,108 C190,108 200,52 290,52", pathC = "M100,122 C190,122 200,178 290,178";
+  const flow = (d, kw, color) => `<path class="path-bg" d="${d}"/>` + (kw > 0.05 ?
+    `<path class="path" d="${d}" stroke="${color}" style="animation-duration:${speed(kw)};filter:drop-shadow(0 0 4px ${color})"/>` : "");
+  const total = (houseKw || 0) + (carKw || 0);
+  return `<svg viewBox="0 0 400 252" role="img" aria-label="Energiflow: hus ${kr(houseKw,1)} kW, bil ${kr(carKw,1)} kW">
+    ${flow(pathH, houseKw || 0, "var(--house)")}${flow(pathC, carKw || 0, "var(--ev)")}
+    ${node(72, 115, ICON.grid, "var(--ink-2)", "Elnettet", `${kr(total,1)} kW`)}
+    ${node(318, 52, ICON.house, "var(--house)", estHouse ? "Huset · skøn" : "Huset", `${houseKw == null ? "–" : (estHouse ? "≈ " : "") + kr(houseKw,1)} kW`)}
+    ${node(318, 178, ICON.car, "var(--ev)", "Elbilen", `${kr(carKw || 0,1)} kW`)}
+  </svg>`;
+}
+
+function donutSVG(frac, a="var(--ev)", b="var(--house)"){
+  const r = 40, C = 2*Math.PI*r, f = Math.max(0, Math.min(1, frac || 0)), gap = f > 0 && f < 1 ? 3 : 0;
+  return `<svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${r}" fill="none" stroke="${b}" stroke-width="10"
+      stroke-dasharray="${Math.max(C*(1-f) - gap, 0)} ${C}" stroke-dashoffset="${-(C*f)}"/>
+    <circle cx="48" cy="48" r="${r}" fill="none" stroke="${a}" stroke-width="10" stroke-dasharray="${Math.max(C*f - gap, 0)} ${C}"/></svg>`;
+}
+
+/* ---------- status (Wall Connector, fejl, energiflow) ---------- */
 async function loadStatus(){
-  const s = await j("/api/status");
-  const p = s.pris_nu;
-  $("priceNow").innerHTML = p ? `${kr(p.total)}<small>kr</small>` : "–";
-  if(p){
-    const moms = p.total - (p.spot + p.tillaeg + p.tariffer);
-    const parts = [["Spotpris", p.spot], ["Tariffer", p.tariffer], ["Elselskab", p.tillaeg], ["Moms", moms]];
-    $("priceParts").innerHTML = parts.map(([n,v]) => `<div class="part">${n}<b>${kr(v)}</b></div>`).join("");
-  }
-
-  const wc = s.wall_connector;
-  let state = "–", rows = "", frac = 0, center = "", on = false;
-  if(!s.konfigureret.wall_connector){ state = "Ikke sat op"; rows = `<div><span>Skriv IP-adressen i config.json</span></div>`; center = "<span>–</span>"; }
-  else if(!wc.online){ state = "Ingen forbindelse"; rows = `<div><span>Tjek IP-adressen i config.json</span></div>`; center = "<span>offline</span>"; }
-  else {
-    on = wc.lader;
-    state = wc.lader ? "Lader" : (wc.bil_tilsluttet ? "Tilsluttet" : "Ledig");
-    frac = wc.effekt_kw / chargeKw;
-    center = `<b>${kr(wc.effekt_kw,1)}</b><span>kW</span>`;
-    const est = p ? wc.session_kwh * p.total : null;
-    if(wc.bil_tilsluttet) rows = `
-      <div><span>Denne session</span><span>${kr(wc.session_kwh,1)} kWh</span></div>
-      <div><span>Varighed</span><span>${Math.floor(wc.session_min/60)} t ${wc.session_min%60} min</span></div>
-      <div><span>Pris nu</span><span>≈ ${kr(est)} kr</span></div>`;
-    else rows = `<div><span>Ingen bil tilsluttet</span></div>`;
-  }
-  $("wcState").textContent = state;
-  $("wcRows").innerHTML = rows;
-  $("wcRing").className = "ringwrap" + (on ? " on" : "");
-  $("wcRing").innerHTML = ringSVG(frac, on) + `<div class="c"><div>${center}</div></div>`;
-
+  S.status = await j("/api/status");
+  const s = S.status;
   const chip = (name, ok) => `<span class="chip ${ok ? "" : "bad"}"><span class="d"></span>${name}</span>`;
   const chips = [];
   if(s.demo) chips.push(`<span class="chip demo">Demo</span>`);
@@ -473,15 +620,105 @@ async function loadStatus(){
   $("errors").style.display = errs.length || warns.length ? "block" : "none";
   $("errors").innerHTML = errs.map(([k,v]) => `<div><b>${esc(k)}:</b> ${esc(v)}</div>`).join("") + warns.map(w => `<div>${w}</div>`).join("");
 
+  const wc = s.wall_connector;
+  const carKw = wc.online && wc.lader ? wc.effekt_kw : 0;
+  $("flow").innerHTML = flowSVG(s.hus_typisk_kw, carKw, true);
+  $("flowNote").textContent = s.hus_typisk_kw != null ? "Huset: typisk forbrug på dette tidspunkt" : "";
+
+  const p = s.pris_nu;
+  if(p){
+    countTo($("priceNow"), p.total, 2);
+    const moms = p.total - (p.spot + p.tillaeg + p.tariffer);
+    const parts = [["Spotpris", p.spot], ["Tariffer og afgift", p.tariffer], ["Elselskab", p.tillaeg], ["Moms", moms]];
+    const max = Math.max(...parts.map(x => Math.abs(x[1])), 0.01);
+    $("priceParts").innerHTML = parts.map(([n,v]) => `<div class="part">${n}<b>${kr(v)}</b>
+      <div class="bar"><i style="width:${Math.max(Math.abs(v)/max*100, 2)}%"></i></div></div>`).join("");
+    $("partsTotal").textContent = kr(p.total) + " kr/kWh";
+  }
   const ls = s.sidste_sync;
   $("footer").textContent = Object.keys(ls).length ? "Senest hentet " + Object.entries(ls).map(([k,t]) => `${k.replace("_"," ")} ${fmtTime(t)}`).join(" · ") : "";
+  renderCar(); renderHeadline(); renderMood();
+}
+
+/* ---------- bilen (Nu) ---------- */
+function renderCar(){
+  const s = S.status, sm = S.smart;
+  if(!s || !sm) return;
+  const wc = s.wall_connector, p = s.pris_nu;
+  const charging = !!(wc.online && wc.lader), connected = !!(wc.online && wc.bil_tilsluttet);
+  $("carCard").classList.toggle("charging", charging);
+  let frac = null, target = null, label, stats = [];
+  if(sm.niveau_nu != null){
+    frac = sm.niveau_nu / 100; target = (sm.maal_pct || 100) / 100;
+    label = `Batteri ${Math.round(sm.niveau_nu)} %`;
+    $("carLabel").innerHTML = `Batteri · <span class="ink2">${Math.round(sm.niveau_nu)} %</span>`;
+  } else {
+    const done = sm.session_kwh || (wc.session_kwh || 0), left = sm.mangler_kwh || 0;
+    frac = done + left > 0 ? done / (done + left) : 0;
+    label = `Denne opladning ${kr(done,1)} kWh`;
+    $("carLabel").innerHTML = connected ? `Denne opladning · <span class="ink2">${kr(done,1)} kWh</span>` : "Bilen";
+  }
+  $("battery").innerHTML = batterySVG(connected ? frac : (frac || 0), connected ? target : null, charging, label);
+  if(!s.konfigureret.wall_connector) stats.push(["Wall Connector", "ikke sat op"]);
+  else if(!wc.online) stats.push(["Wall Connector", "ingen forbindelse"]);
+  else if(connected){
+    stats.push(["Effekt", `${kr(wc.effekt_kw,1)} kW`]);
+    stats.push(["Session", `${kr(wc.session_kwh,1)} kWh · ${Math.floor(wc.session_min/60)} t ${wc.session_min%60} m`]);
+    const left = sm.mangler_kwh || 0, mode = sm.indstillinger.mode;
+    if(left > 0.05 && mode === "now" && charging && wc.effekt_kw > 0.5){
+      // Lad nu: færdig når resten er ladet med den nuværende effekt
+      stats.push(["Færdig ca.", fmtTime(nowS() + left / wc.effekt_kw * 3600)]);
+      if(p) stats.push(["Resten koster", `≈ ${kr(left * p.total,0)} kr`]);
+    } else if(mode === "smart" && sm.plan && !sm.plan.faerdig && sm.plan.faerdig_kl){
+      stats.push(["Færdig ca.", fmtTime(sm.plan.faerdig_kl)]);
+      if(sm.plan.kr != null) stats.push(["Resten koster", `≈ ${kr(sm.plan.kr,0)} kr`]);
+    } else if(left <= 0.05 && sm.mangler_kwh != null) stats.push(["Status", "klar"]);
+  } else stats.push(["Status", "ingen bil tilsluttet"]);
+  $("carStats").innerHTML = stats.map(([a,b]) => `<div><span>${a}</span><b>${b}</b></div>`).join("");
+}
+
+function renderHeadline(){
+  const s = S.status, sm = S.smart, pr = S.prices;
+  const h = hourOf(nowS());
+  $("greet").textContent = h < 5 ? "God nat" : h < 10 ? "God morgen" : h < 12 ? "God formiddag" : h < 18 ? "God eftermiddag" : "God aften";
+  if(!s || !sm) return;
+  const wc = s.wall_connector, p = s.pris_nu, plan = sm.plan, mode = sm.indstillinger.mode;
+  const price = p ? `<b>${kr(p.total)} kr/kWh</b>` : "";
+  let t;
+  if(!wc.online) t = s.konfigureret.wall_connector ? "Ingen forbindelse til Wall Connectoren lige nu." : `Strømmen koster ${price} lige nu.`;
+  else if(wc.lader) t = `Bilen lader med <b>${kr(wc.effekt_kw,1)} kW</b> – strømmen koster ${price} lige nu.`;
+  else if(wc.bil_tilsluttet && mode === "smart" && plan && !plan.faerdig && plan.perioder.length)
+    t = `Venter på billig strøm – starter <b>kl. ${fmtTime(plan.perioder[0][0])}</b> og er klar til <b>${fmtTime(plan.klar)}</b>.`;
+  else if(wc.bil_tilsluttet && plan && plan.faerdig) t = "Bilen er <b>klar</b> – der er ikke mere at lade.";
+  else if(wc.bil_tilsluttet) t = `Bilen er sat til. Strømmen koster ${price} lige nu.`;
+  else {
+    const b = pr && pr.billigste_blok;
+    t = b ? `Ingen bil tilsluttet. Billigst at lade <b>${fmtRange([b.start, b.slut])}</b>${dayKey(b.start) === dayKey(nowS()) ? "" : " " + fmtDay(b.start)}.`
+          : `Ingen bil tilsluttet. Strømmen koster ${price} lige nu.`;
+  }
+  $("headline").innerHTML = t;
 }
 
 /* ---------- priser ---------- */
+function todayRange(){
+  const pr = S.prices; if(!pr) return null;
+  const today = pr.priser.filter(p => dayKey(p.t) === dayKey(pr.nu)).map(p => p.total);
+  return today.length ? {lo: Math.min(...today), hi: Math.max(...today), all: today} : null;
+}
+function renderMood(){
+  const r = todayRange(), p = S.status && S.status.pris_nu;
+  if(!r || !p) return;
+  const f = Math.max(0, Math.min(1, (p.total - r.lo) / ((r.hi - r.lo) || 1)));
+  document.body.style.setProperty("--mood", `color-mix(in oklab, ${css("--mood-dear")} ${Math.round(f*100)}%, ${css("--mood-cheap")})`);
+  const sorted = [...r.all].sort((a,b) => a-b), q1 = sorted[Math.floor(sorted.length/3)], q2 = sorted[Math.floor(sorted.length*2/3)];
+  const lvl = p.total <= q1 ? ["cheap","↓ Billig i dag"] : p.total >= q2 ? ["dear","↑ Dyr i dag"] : ["mid","– Middel i dag"];
+  $("priceLevel").className = "level " + lvl[0]; $("priceLevel").textContent = lvl[1];
+}
+
 function drawSpark(d){
   const pts = d.priser.filter(p => p.t + 900 > d.nu && p.t < d.nu + 86400);
-  if(pts.length < 2){ $("spark").innerHTML = ""; return; }
-  const v = pts.map(p => p.total), lo = Math.min(...v), hi = Math.max(...v), W = 300, H = 76, pad = 7;
+  if(pts.length < 2){ $("spark").innerHTML = ""; $("sparkCap").textContent = ""; return; }
+  const v = pts.map(p => p.total), lo = Math.min(...v), hi = Math.max(...v), W = 300, H = 70, pad = 6;
   const x = i => i/(pts.length-1)*W, y = val => H - pad - (val-lo)/((hi-lo)||1)*(H-2*pad);
   const line = pts.map((p,i) => `${i?"L":"M"}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join("");
   const iMin = v.indexOf(lo);
@@ -489,34 +726,77 @@ function drawSpark(d){
       <stop offset="0" stop-color="var(--ev)" stop-opacity=".28"/><stop offset="1" stop-color="var(--ev)" stop-opacity="0"/></linearGradient></defs>
     <path d="${line}L${W},${H}L0,${H}Z" fill="url(#sg)"/>
     <path d="${line}" fill="none" stroke="var(--ev)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-    <circle cx="${x(0)}" cy="${y(v[0])}" r="4" fill="var(--ev)" stroke="var(--card)" stroke-width="2" vector-effect="non-scaling-stroke"/>
     <circle cx="${x(iMin)}" cy="${y(lo)}" r="3.5" fill="var(--card)" stroke="var(--ev)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
   $("sparkCap").textContent = `Næste 24 t · lavest ${kr(lo)} kr kl. ${fmtTime(pts[iMin].t)}`;
 }
 
+function renderForecast(d){
+  const plan = new Set(d.plan || []);
+  const days = {};
+  d.priser.forEach((p, i) => (days[dayKey(p.t)] = days[dayKey(p.t)] || []).push(i));
+  const today = dayKey(d.nu), keys = [];
+  for(let k = -1; k <= 1; k++) keys.push(dayKey(d.i_dag + k*86400 + 12*3600));
+  // Skala efter 5.–95. percentil, så én dyr spids ikke gør resten ensfarvet
+  const sorted = d.priser.map(p => p.total).sort((a,b) => a-b);
+  const pct = q => sorted[Math.min(sorted.length-1, Math.max(0, Math.round(q*(sorted.length-1))))];
+  const lo = pct(.05), hi = pct(.95);
+  $("rampLo").textContent = kr(lo); $("rampHi").textContent = kr(hi) + " kr";
+  const names = ["I går", "I dag", "I morgen"];
+  const rows = keys.map((k, r) => {
+    const idx = days[k] || [];
+    if(!idx.length) return `<div class="fc-row"><div class="fc-lab"><b>${names[r]}</b><span>${r === 2 ? "kommer ca. kl. 13" : ""}</span></div>
+      <div class="fc-empty">${r === 2 ? "Morgendagens priser offentliggøres ca. kl. 13" : "Ingen priser"}</div></div>`;
+    const ps = idx.map(i => d.priser[i]), dv = ps.map(p => p.total), avg = dv.reduce((a,b) => a+b, 0) / dv.length;
+    const iMin = dv.indexOf(Math.min(...dv));
+    const cells = new Array(96).fill(`<i></i>`);
+    let nowPos = null;
+    idx.forEach(i => {
+      const p = d.priser[i], q = hourOf(p.t)*4 + Math.floor(minOf(p.t)/15);
+      const f = Math.max(0, Math.min(1, (p.total - lo) / ((hi - lo) || 1)));
+      const cls = [p.t + 900 <= d.nu ? "past" : "", plan.has(p.t) ? "pl" : ""].join(" ").trim();
+      cells[q] = `<i data-i="${i}" class="${cls}" style="background:color-mix(in oklab, var(--heat-hi) ${Math.round(6 + f*94)}%, var(--heat-lo))"></i>`;
+      if(p.t <= d.nu && d.nu < p.t + 900) nowPos = (q + (d.nu - p.t)/900) / 96 * 100;
+    });
+    return `<div class="fc-row"><div class="fc-lab"><b>${names[r]}</b><span>gns. ${kr(avg)} kr</span><span>billigst kl. ${fmtTime(ps[iMin].t)}</span></div>
+      <div class="fc-cells">${cells.join("")}${nowPos != null ? `<div class="now" style="left:${nowPos}%"></div>` : ""}</div></div>`;
+  });
+  $("forecast").innerHTML = rows.join("") + `<div class="fc-axis"><span></span><div><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>`;
+}
+$("forecast").addEventListener("pointermove", e => {
+  const c = e.target.closest("[data-i]"), tip = $("tip");
+  if(!c || !S.prices){ tip.hidden = true; return; }
+  const p = S.prices.priser[+c.dataset.i], pl = new Set(S.prices.plan || []);
+  tip.innerHTML = `${fmtDay(p.t)} · ${fmtRange([p.t, p.t+900])}<br><b>${kr(p.total)} kr/kWh</b>${pl.has(p.t) ? " · smart-plan" : ""}`;
+  tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; tip.hidden = false;
+});
+$("forecast").addEventListener("pointerleave", () => $("tip").hidden = true);
+
 async function loadPrices(){
-  const d = await j("/api/prices?timer=" + hours);
-  lastPrices = d;
+  S.prices = await j(`/api/prices?timer=${hours}&dage_tilbage=1`);
+  renderPrices(); renderHeadline(); renderMood();
+}
+function renderPrices(){
+  const d = S.prices; if(!d) return;
   const b = d.billigste_blok;
   if(b){
-    const sameDay = dayKey(b.start) === dayKey(Date.now()/1000);
-    $("cheapTime").textContent = `${fmtTime(b.start)}–${fmtTime(b.slut)}`;
-    $("cheapSub").textContent = `${sameDay ? "I dag" : fmtDay(b.start)} · gns. ${kr(b.gns_kr_pr_kwh)} kr/kWh`;
+    $("cheapTime").textContent = fmtRange([b.start, b.slut]);
+    $("cheapSub").textContent = `${dayKey(b.start) === dayKey(d.nu) ? "I dag" : fmtDay(b.start)} · gns. ${kr(b.gns_kr_pr_kwh)} kr/kWh`;
   } else { $("cheapTime").textContent = "–"; $("cheapSub").textContent = "Ingen priser endnu"; }
   $("hoursSub").textContent = `≈ ${Math.round(hours*chargeKw)} kWh ved ${kr(chargeKw,0)} kW`;
   drawSpark(d);
+  renderForecast(d);
 
-  const pts = d.priser;
+  const pts = d.priser.filter(p => p.t >= d.i_dag);
   const nowIdx = pts.findIndex(p => p.t <= d.nu && d.nu < p.t + 900);
   const plan = new Set(d.plan || []);
+  PC.pts = pts; PC.plan = plan;
   const showBlock = !plan.size && b;
   const inBlock = t => showBlock && t >= b.start && t < b.slut;
   $("priceLegend").innerHTML = (plan.size ? `<span><i style="background:var(--ev)"></i>Smart-plan</span>`
     : showBlock ? `<span><i style="background:var(--ev)"></i>Billigste ${hours} timer</span>` : "")
     + `<span><i style="background:var(--bar)"></i>Pris</span>`;
   const colors = pts.map((p,i) => plan.has(p.t) || inBlock(p.t) ? css("--ev") : i < nowIdx ? css("--bar-past") : css("--bar"));
-  const labels = pts.map(p => fmtTime(p.t));
-  const data = {labels, datasets:[{data: pts.map(p => p.total), backgroundColor: colors, hoverBackgroundColor: css("--ink-2"),
+  const data = {labels: pts.map(p => fmtTime(p.t)), datasets:[{data: pts.map(p => p.total), backgroundColor: colors, hoverBackgroundColor: css("--ink-2"),
     borderRadius: {topLeft:3, topRight:3}, borderSkipped: "bottom", barPercentage: 1, categoryPercentage: .8}]};
   const nowLine = {id:"now", afterDatasetsDraw(c){
     if(nowIdx < 0) return;
@@ -527,7 +807,7 @@ async function loadPrices(){
     g.textAlign = "center"; g.fillText("NU", xx, top+8); g.restore(); }};
   const dayLine = {id:"days", beforeDatasetsDraw(c){
     const g = c.ctx, {top,bottom} = c.chartArea;
-    pts.forEach((p,i) => { if(i && isHour(p.t) && hourOf(p.t)===0){
+    pts.forEach((p,i) => { if(i && isHour(p.t) && hourOf(p.t) === 0){
       const xx = c.scales.x.getPixelForValue(i) - c.scales.x.width/pts.length/2;
       g.save(); g.strokeStyle = css("--line-2"); g.beginPath(); g.moveTo(xx, top); g.lineTo(xx, bottom); g.stroke();
       g.fillStyle = css("--muted"); g.font = `500 11px ${Chart.defaults.font.family}`; g.fillText(fmtDay(p.t), xx+6, top+8); g.restore(); }});
@@ -537,18 +817,166 @@ async function loadPrices(){
     maintainAspectRatio:false, animation:false, layout:{padding:{top:6}},
     interaction:{mode:"index", intersect:false},
     plugins:{legend:{display:false}, tooltip:{displayColors:false, callbacks:{
-      title:i => { const p = lastPrices.priser[i[0].dataIndex]; return `${fmtDay(p.t)} · ${fmtRange([p.t, p.t+900])}`; },
-      label:i => { const p = lastPrices.priser[i.dataIndex], pl = new Set(lastPrices.plan||[]);
-        return [`${kr(p.total)} kr/kWh`, `Spot ${kr(p.spot,3)} · tariffer ${kr(p.tariffer,3)}`].concat(pl.has(p.t) ? ["Smart-plan lader her"] : []); }}}},
+      title(i){ const p = PC.pts[i[0].dataIndex]; return `${fmtDay(p.t)} · ${fmtRange([p.t, p.t+900])}`; },
+      label(i){ const p = PC.pts[i.dataIndex];
+        return [`${kr(p.total)} kr/kWh`, `Spot ${kr(p.spot,3)} · tariffer ${kr(p.tariffer,3)}`].concat(PC.plan.has(p.t) ? ["Smart-plan lader her"] : []); }}}},
     scales:{
       x:{grid:{display:false}, border:{display:false}, ticks:{autoSkip:false, maxRotation:0,
-        callback(v,i){ const p = lastPrices.priser[i]; if(!p) return "";
+        callback(v,i){ const p = PC.pts[i]; if(!p) return "";
           const every = this.chart.width < 640 ? 12 : 6, h = hourOf(p.t);
           return isHour(p.t) && h % every === 0 && h ? fmtTime(p.t) : ""; }}},
       y:{beginAtZero:true, border:{display:false}, grid:{color:css("--line")}, ticks:{maxTicksLimit:5, callback:v => kr(v)}}}}});
 }
 
-/* ---------- forbrug ---------- */
+/* ---------- smart opladning (Plan) ---------- */
+let dragging = null;
+function renderTimeline(){
+  const sm = S.smart, el = $("timeline");
+  if(!sm) return;
+  const start = nowS(), span = 24*3600, end = start + span;
+  const pos = t => Math.max(0, Math.min(100, (t - start) / span * 100));
+  const p = sm.plan, mode = sm.indstillinger.mode;
+  const deadline = dragging ? dragging.t : (p ? p.klar : start + 12*3600);
+  const est = new Set((p ? p.slots : []).filter(s => s.estimeret).map(s => s.t));
+  const segs = p && mode !== "now" ? p.perioder.map(([a,b]) => `<div class="tl-seg${est.has(a) ? " est" : ""}"
+     style="left:${pos(a)}%;width:${Math.max(pos(b)-pos(a), .7)}%" title="${fmtRange([a,b])}"></div>`).join("") : "";
+  const ticks = [`<span style="left:0">Nu</span>`];
+  const step = el.clientWidth && el.clientWidth < 520 ? 21600 : 10800;
+  for(let t = Math.ceil((start + step/2) / step) * step; t < end - 3600; t += step)
+    ticks.push(`<span style="left:${pos(t)}%">${fmtTime(t)}</span>`);
+  el.innerHTML = `<div class="tl-track" id="tlTrack">${segs}<div class="tl-after" style="left:${pos(deadline)}%"></div>
+      <div class="tl-handle${dragging ? " drag" : ""}" id="tlHandle" style="left:${pos(deadline)}%" role="slider" tabindex="0"
+        aria-label="Klar kl." aria-valuetext="${fmtTime(deadline)}"><span>Klar ${fmtTime(deadline)}</span></div></div>
+    <div class="tl-ticks">${ticks.join("")}</div>`;
+}
+function tlTimeAt(clientX){
+  const r = $("tlTrack").getBoundingClientRect(), start = nowS();
+  const f = Math.max(0.02, Math.min(1, (clientX - r.left) / r.width));
+  const t = start + f * 24*3600;
+  return Math.round(t / 900) * 900;
+}
+$("timeline").addEventListener("pointerdown", e => {
+  if(!$("tlTrack") || !$("tlTrack").contains(e.target)) return;
+  e.preventDefault();
+  dragging = {t: tlTimeAt(e.clientX)}; $("timeline").setPointerCapture(e.pointerId); renderTimeline();
+});
+$("timeline").addEventListener("pointermove", e => { if(dragging){ dragging.t = tlTimeAt(e.clientX); renderTimeline(); } });
+$("timeline").addEventListener("pointerup", () => {
+  if(!dragging) return;
+  const t = dragging.t; dragging = null;
+  $("smartReady").value = hhmm(t);
+  saveSmart({klar_kl: hhmm(t)});
+});
+$("timeline").addEventListener("keydown", e => {
+  if(!S.smart || !S.smart.plan || !["ArrowLeft","ArrowRight"].includes(e.key)) return;
+  e.preventDefault();
+  saveSmart({klar_kl: hhmm(S.smart.plan.klar + (e.key === "ArrowRight" ? 900 : -900))});
+});
+
+function renderSmart(){
+  const s = S.smart; if(!s) return;
+  const st = s.indstillinger, p = s.plan;
+  [...$("modeSeg").children].forEach(b => b.classList.toggle("on", b.dataset.m === st.mode));
+  if(document.activeElement !== $("smartReady")) $("smartReady").value = st.klar_kl;
+
+  const r = $("targetRange");
+  if(document.activeElement !== r){
+    if(s.kilde === "soc"){
+      r.min = 50; r.max = 100; r.step = 5; r.value = s.maal_pct || 80;
+      $("targetLabel").textContent = "Lad op til"; $("targetScale").innerHTML = "<span>50 %</span><span>100 %</span>";
+    } else {
+      r.min = 5; r.max = 80; r.step = 1; r.value = Math.round(st.kwh);
+      $("targetLabel").textContent = "Energi i alt"; $("targetScale").innerHTML = "<span>5 kWh</span><span>80 kWh</span>";
+    }
+    updateRangeLabel();
+  }
+
+  let label = "Plan", head = "–", sub = [], saving = "", status = [];
+  if(st.mode === "off"){
+    label = "Slået fra"; head = "Appen styrer ikke opladningen";
+    if(p && p.perioder.length) sub.push(`Billigst lige nu: ${p.perioder.map(fmtRange).join(", ")}`);
+  } else if(st.mode === "now"){
+    label = "Lad nu"; head = s.lader ? "Lader med fuld kraft" : (s.tilsluttet ? "Starter opladning …" : "Sæt bilen til");
+  } else if(!p || p.faerdig){
+    head = s.tilsluttet ? "Færdig – intet mere at lade" : "Klar til næste opladning";
+  } else {
+    label = s.forhaandsvisning ? "Hvis bilen sættes til nu" : (s.oensket ? "Lader nu efter planen" : "Venter på billig strøm");
+    head = p.perioder.map(fmtRange).join("  ·  ");
+    sub.push(`${kr(p.kwh,1)} kWh · ca. ${kr(p.kr)} kr · klar kl. ${fmtTime(p.klar)}`);
+    if(p.kr_hvis_nu != null && p.kr != null && p.kr_hvis_nu - p.kr >= 0.5)
+      saving = `<span class="saving">↓ ${kr(p.kr_hvis_nu - p.kr)} kr billigere end at lade nu</span>`;
+    if(p.estimeret) sub.push("Stribede felter: morgendagens priser er skønnet (kommer ca. kl. 13)");
+    if(p.naar_ikke) sub.push(`<span class="warn">▲ Ikke tid nok til at nå det hele inden kl. ${fmtTime(p.klar)}</span>`);
+  }
+  if(s.soc) status.push(`Batteri <span class="ink2">${Math.round(s.niveau_nu ?? s.soc.niveau)} %</span> · bilens ladegrænse ${Math.round(s.soc.graense)} %`);
+  if(st.mode !== "off") status.push(s.styrer_bilen
+    ? "Appen starter og stopper opladningen selv."
+    : "Kun anbefaling – appen kan ikke styre bilen uden Tesla Fleet API (se README).");
+  if(s.fejl) status.push(`<span class="crit">▲ ${esc(s.fejl)}</span>`);
+  $("smartLabel").textContent = label;
+  $("smartHead").textContent = head;
+  $("smartSub").innerHTML = sub.join("<br>");
+  $("smartSaving").innerHTML = saving;
+  $("smartStatus").innerHTML = status.join("<br>");
+  if(!dragging) renderTimeline();
+  $("smartLog").innerHTML = s.log.slice(0,6).map(l => `<li><b>${fmtTime(l.t)}</b>${esc(l.tekst)}</li>`).join("");
+  $("smartLog").hidden = !s.log.length;
+}
+function updateRangeLabel(){
+  const r = $("targetRange"), soc = S.smart && S.smart.kilde === "soc";
+  r.style.setProperty("--p", ((r.value - r.min) / (r.max - r.min) * 100) + "%");
+  $("targetVal").textContent = soc ? `${r.value} %` : `${r.value} kWh`;
+}
+$("targetRange").addEventListener("input", updateRangeLabel);
+$("targetRange").addEventListener("change", e => {
+  const soc = S.smart && S.smart.kilde === "soc";
+  saveSmart(soc ? {maal_pct: Number(e.target.value)} : {kwh: Number(e.target.value)});
+  e.target.blur();
+});
+$("smartReady").addEventListener("change", e => { if(e.target.value) saveSmart({klar_kl: e.target.value}); });
+$("smartForm").addEventListener("submit", e => e.preventDefault());
+
+async function loadSmart(){
+  S.smart = await j("/api/smart");
+  chargeKw = S.smart.ladeeffekt_kw || chargeKw;
+  renderSmart(); renderCar(); renderHeadline();
+}
+async function saveSmart(body){
+  try { S.smart = await post("/api/smart", body); renderSmart(); renderCar(); } catch(e){ alert(e.message); }
+  loadSmart(); loadPrices();
+}
+
+/* ---------- historik ---------- */
+async function loadInsights(){
+  S.insights = await j("/api/insights");
+  const c = S.insights.denne, f = S.insights.forrige;
+  countTo($("monthKr"), c.kr, 0);
+  $("monthSub").textContent = c.kwh ? `${kr(c.kwh,0)} kWh · ≈ ${kr(c.km,0)} km · ${kr(c.kr_pr_km)} kr/km` : "Ingen opladning endnu denne måned";
+  const maxKm = Math.max(c.kr_pr_km || 0, c.benzin_kr_pr_km, 0.01);
+  const cmp = c.kr_pr_km != null ? `
+    <div><span>Elbil</span><div class="tr"><i style="width:${c.kr_pr_km/maxKm*100}%;background:var(--ev)"></i></div><b>${kr(c.kr_pr_km)} kr/km</b></div>
+    <div><span>Benzin</span><div class="tr"><i style="width:${c.benzin_kr_pr_km/maxKm*100}%;background:var(--ink-2);opacity:.45"></i></div><b>${kr(c.benzin_kr_pr_km)} kr/km</b></div>` : "";
+  $("nuCompare").innerHTML = cmp;
+
+  const saved = c.sparet_kr, better = saved != null && saved >= 0;
+  $("insights").innerHTML = `
+    <div class="card"><div class="label">Smart timing denne måned</div>
+      <div class="big"><span id="insSaved">–</span><small>kr ${better ? "sparet" : "dyrere"}</small></div>
+      <div class="sub">${c.snitpris_bil != null ? `Du betalte ${kr(c.snitpris_bil)} kr/kWh – månedens snitpris er ${kr(c.snitpris_marked)}` : "Ingen opladning endnu"}</div>
+      <div class="delta">${f.sparet_kr != null ? `Sidste måned: ${kr(Math.abs(f.sparet_kr),0)} kr ${f.sparet_kr >= 0 ? "sparet" : "dyrere end snittet"}` : ""}</div></div>
+    <div class="card"><div class="label">Elbil mod benzin</div>
+      <div class="big"><span id="insPetrol">–</span><small>kr billigere</small></div>
+      <div class="sub">≈ ${kr(c.km,0)} km – samme tur i benzinbil ville koste ${kr(c.benzin_kr,0)} kr</div>
+      <div class="compare">${cmp}</div></div>
+    <div class="card donutcard"><div class="donut">${donutSVG(c.billig_andel || 0, "var(--ev)", "var(--line-2)")}
+      <div class="c">${c.billig_andel != null ? Math.round(c.billig_andel*100) + "%" : "–"}</div></div>
+      <div><div class="label">Ladet i billige timer</div>
+      <div class="sub" style="margin-top:6px">Andel af månedens kWh ladet til under døgnets midterpris</div>
+      ${f.billig_andel != null ? `<div class="delta">Sidste måned: ${Math.round(f.billig_andel*100)} %</div>` : ""}</div></div>`;
+  countTo($("insSaved"), saved == null ? null : Math.abs(saved), 0);
+  countTo($("insPetrol"), c.kwh ? c.sparet_vs_benzin_kr : null, 0);
+}
+
 async function loadSummary(){
   const rows = await j(`/api/summary?group=${group}&antal=${group==="day"?31:12}`);
   const name = r => group === "day"
@@ -588,19 +1016,16 @@ async function loadSummary(){
 
   const m = await j("/api/summary?group=month&antal=2");
   const cur = m[m.length-1] || {}, prev = m.length > 1 ? m[0] : null;
-  const evAvg = cur.elbil_kwh ? cur.elbil_kr / cur.elbil_kwh : null;
-  const houseAvg = cur.hus_kwh ? cur.hus_kr / cur.hus_kwh : null;
   const share = cur.total_kr ? cur.elbil_kr / cur.total_kr : 0;
-  const delta = (now, before) => before ? `Sidste måned ${kr(before,0)} kr` : "";
   $("totals").innerHTML = `
     <div class="card kpi"><div class="label">Elbil denne måned</div>
       <div class="big"><span class="dot" style="background:var(--ev)"></span>${kr(cur.elbil_kr,0)}<small>kr</small></div>
-      <div class="sub">${kr(cur.elbil_kwh,0)} kWh · gns. ${kr(evAvg)} kr/kWh</div>
-      <div class="delta">${prev ? delta(cur.elbil_kr, prev.elbil_kr) : ""}</div></div>
+      <div class="sub">${kr(cur.elbil_kwh,0)} kWh · gns. ${kr(cur.elbil_kwh ? cur.elbil_kr/cur.elbil_kwh : null)} kr/kWh</div>
+      <div class="delta">${prev ? `Sidste måned ${kr(prev.elbil_kr,0)} kr` : ""}</div></div>
     <div class="card kpi"><div class="label">Hus denne måned</div>
       <div class="big"><span class="dot" style="background:var(--house)"></span>${kr(cur.hus_kr,0)}<small>kr</small></div>
-      <div class="sub">${kr(cur.hus_kwh,0)} kWh · gns. ${kr(houseAvg)} kr/kWh</div>
-      <div class="delta">${prev ? delta(cur.hus_kr, prev.hus_kr) : ""}</div></div>
+      <div class="sub">${kr(cur.hus_kwh,0)} kWh · gns. ${kr(cur.hus_kwh ? cur.hus_kr/cur.hus_kwh : null)} kr/kWh</div>
+      <div class="delta">${prev ? `Sidste måned ${kr(prev.hus_kr,0)} kr` : ""}</div></div>
     <div class="card donutcard"><div class="donut">${donutSVG(share)}<div class="c">${Math.round(share*100)}%</div></div>
       <div><div class="label">Elbilens andel</div><div class="sub" style="margin-top:6px">af månedens forbrug, ekskl. abonnementer</div>
       ${cur.abonnement_kr?`<div class="sub" style="margin-top:6px">Hele regningen: <span class="ink2">${kr(cur.total_inkl_abonnement_kr,0)} kr</span></div>`:""}</div></div>`;
@@ -620,76 +1045,13 @@ async function loadSessions(){
   $("sessMore").textContent = expanded.sess ? "Vis færre" : `Vis alle ${ss.length}`;
 }
 
-/* ---------- smart opladning ---------- */
-function drawTimeline(p){
-  const el = $("timeline");
-  if(!p || !p.perioder.length){ el.innerHTML = ""; return; }
-  const start = Math.min(Math.floor(Date.now()/1000), p.perioder[0][0]), end = p.klar, span = Math.max(end - start, 1);
-  const pos = t => Math.max(0, Math.min(100, (t - start) / span * 100));
-  const est = new Set(p.slots.filter(s => s.estimeret).map(s => s.t));
-  const segs = p.perioder.map(([a,b]) => `<div class="tl-seg${est.has(a) ? " est" : ""}" style="left:${pos(a)}%;width:${Math.max(pos(b)-pos(a),.6)}%" title="${fmtRange([a,b])}"></div>`).join("");
-  const step = span > 10*3600 ? 3*3600 : span > 5*3600 ? 2*3600 : 3600;
-  const ticks = [`<span style="left:0">Nu</span>`];
-  for(let t = Math.ceil((start + step*0.6) / 3600) * 3600; t < end - step*0.6; t += step)
-    ticks.push(`<span style="left:${pos(t)}%">${fmtTime(t)}</span>`);
-  ticks.push(`<span class="end" style="left:100%">Klar ${fmtTime(end)}</span>`);
-  el.innerHTML = `<div class="tl-track">${segs}</div><div class="tl-ticks">${ticks.join("")}</div>`;
-}
-
-async function loadSmart(){
-  const s = await j("/api/smart");
-  const st = s.indstillinger, p = s.plan;
-  chargeKw = s.ladeeffekt_kw || chargeKw;
-  [...$("modeSeg").children].forEach(b => b.classList.toggle("on", b.dataset.m === st.mode));
-  if(document.activeElement !== $("smartReady")) $("smartReady").value = st.klar_kl;
-  if(document.activeElement !== $("smartKwh")) $("smartKwh").value = Math.round(st.kwh);
-  $("kwhLabel").hidden = s.kilde === "soc";
-
-  let label = "Plan", head = "–", sub = [], saving = "", status = [], tl = null;
-  if(st.mode === "off"){
-    label = "Slået fra"; head = "Appen styrer ikke opladningen";
-    if(p && p.perioder.length){ sub.push(`Billigst lige nu: ${p.perioder.map(fmtRange).join(", ")}`); tl = p; }
-  } else if(st.mode === "now"){
-    label = "Lad nu"; head = s.lader ? "Lader med fuld kraft" : (s.tilsluttet ? "Starter opladning …" : "Sæt bilen til");
-  } else if(!p || p.faerdig){
-    head = s.tilsluttet ? "Færdig – intet mere at lade" : "Klar til næste opladning";
-  } else {
-    tl = p;
-    label = s.forhaandsvisning ? "Hvis bilen sættes til nu" : (s.oensket ? "Lader nu efter planen" : "Venter på billig strøm");
-    head = p.perioder.map(fmtRange).join("  ·  ");
-    sub.push(`${kr(p.kwh,1)} kWh · ca. ${kr(p.kr)} kr · klar kl. ${fmtTime(p.klar)}`);
-    if(p.kr_hvis_nu != null && p.kr != null && p.kr_hvis_nu - p.kr >= 0.5)
-      saving = `<span class="saving">↓ ${kr(p.kr_hvis_nu - p.kr)} kr billigere end at lade nu</span>`;
-    if(p.estimeret) sub.push("Stribede felter: morgendagens priser er skønnet (kommer ca. kl. 13)");
-    if(p.naar_ikke) sub.push(`<span class="warn">▲ Ikke tid nok til at nå det hele inden kl. ${fmtTime(p.klar)}</span>`);
-  }
-  if(s.soc) status.push(`Batteri <span class="ink2">${Math.round(s.soc.niveau)} % → ${Math.round(s.soc.graense)} %</span> (bilens ladegrænse)`);
-  if(st.mode !== "off") status.push(s.styrer_bilen
-    ? "Appen starter og stopper opladningen selv."
-    : "Kun anbefaling – appen kan ikke styre bilen uden Tesla Fleet API (se README).");
-  if(s.fejl) status.push(`<span class="crit">▲ ${esc(s.fejl)}</span>`);
-  $("smartLabel").textContent = label;
-  $("smartHead").textContent = head;
-  $("smartSub").innerHTML = sub.join("<br>");
-  $("smartSaving").innerHTML = saving;
-  $("smartStatus").innerHTML = status.join("<br>");
-  drawTimeline(tl);
-  $("smartLog").innerHTML = s.log.slice(0,6).map(l => `<li><b>${fmtTime(l.t)}</b>${esc(l.tekst)}</li>`).join("");
-  $("smartLog").hidden = !s.log.length;
-}
-
-async function saveSmart(body){
-  try { await post("/api/smart", body); } catch(e){ alert(e.message); }
-  loadSmart(); loadPrices();
-}
-
 /* ---------- app (PWA) ---------- */
 function renderOffline(){
   const box = $("chips"); if(!box) return;
-  let el = $("offlineChip");
-  if(offlineSince && !el){
+  const el = $("offlineChip");
+  if(offlineSince && !el)
     box.insertAdjacentHTML("afterbegin", `<span class="chip off" id="offlineChip" title="Viser senest hentede data"><span class="d"></span>Offline</span>`);
-  } else if(!offlineSince && el) el.remove();
+  else if(!offlineSince && el) el.remove();
 }
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -703,17 +1065,10 @@ $("installBtn").addEventListener("click", async () => {
   if(installPrompt){ installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $("installBtn").hidden = true; }
   else alert("Sådan får du appen på iPhone/iPad:\n\n1. Tryk på Del-knappen (firkanten med pilen) nederst i Safari\n2. Vælg »Føj til hjemmeskærm«\n3. Tryk »Tilføj«");
 });
-// Når appen åbnes igen fra baggrunden, hentes friske tal med det samme
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") refreshAll(); });
 
-/* ---------- hændelser ---------- */
+/* ---------- øvrige hændelser ---------- */
 $("modeSeg").addEventListener("click", e => { const m = e.target.closest("button")?.dataset.m; if(m) saveSmart({mode: m}); });
-$("smartForm").addEventListener("submit", e => {
-  e.preventDefault();
-  const body = {klar_kl: $("smartReady").value};
-  if(!$("kwhLabel").hidden) body.kwh = Number($("smartKwh").value);
-  saveSmart(body);
-});
 $("hoursSeg").addEventListener("click", e => {
   const h = e.target.closest("button")?.dataset.h; if(!h) return;
   hours = Number(h);
@@ -737,16 +1092,18 @@ $("syncBtn").addEventListener("click", async () => {
   setTimeout(() => { $("syncBtn").disabled = false; refreshAll(); }, 4000);
 });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if(!document.documentElement.dataset.theme){ applyTheme(null); loadPrices(); loadSummary(); }
+  if(!document.documentElement.dataset.theme){ applyTheme(null); renderPrices(); loadSummary(); renderMood(); }
 });
 
-[loadStatus, loadPrices, loadSummary, loadSessions, loadSmart] =
-  [loadStatus, loadPrices, loadSummary, loadSessions, loadSmart].map(safe);
-function refreshAll(){ loadSmart().then(() => { loadStatus(); loadPrices(); }); loadSummary(); loadSessions(); }
+[loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights] =
+  [loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights].map(safe);
+function refreshAll(){ loadSmart().then(() => { loadStatus(); loadPrices(); }); loadSummary(); loadSessions(); loadInsights(); }
 chartDefaults();
+showTab(location.hash.slice(1) || "nu", false);
 refreshAll();
 setInterval(() => { loadStatus(); loadSmart(); }, 15000);
-setInterval(() => { loadPrices(); loadSummary(); loadSessions(); }, 5*60000);
+setInterval(() => { loadPrices(); loadSummary(); loadSessions(); loadInsights(); }, 5*60000);
+setInterval(() => { if(!dragging && !$("view-plan").hidden) renderTimeline(); renderHeadline(); }, 60000);
 </script>
 </body>
 </html>

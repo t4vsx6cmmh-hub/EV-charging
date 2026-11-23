@@ -22,7 +22,14 @@ Appen kører på en computer derhjemme (fx en Raspberry Pi, en gammel PC eller e
 (spotpris + Andel Energi-tillæg + nettarif + Energinet-tariffer + elafgift) × 1,25 moms
 ```
 
-Dashboardet viser:
+Appen har fire faner:
+
+- **Nu** – bilens batteri, energiflowet fra elnettet til hus og bil, elprisen lige nu og månedens tal
+- **Plan** – smart opladning: træk i tidslinjen for at vælge "klar kl.", og vælg mål med skyderen
+- **Priser** – elprisen som en vejrudsigt for i går, i dag og i morgen, og hvad prisen består af
+- **Historik** – besparelser, elbil mod benzin, forbrug pr. dag/måned og alle ladesessioner
+
+Den viser blandt andet:
 
 - elprisen lige nu og priskurven for i dag og i morgen
 - om bilen lader, med hvor mange kW, og hvad sessionen koster
@@ -79,6 +86,8 @@ cp config.example.json config.json
 | `metering_point_id` | Tom = vælg automatisk dit forbrugsmålepunkt |
 | `manual_tariffs` | Normalt `null`. Hvis Eloverblik ikke giver tariffer, kan de skrives ind: `{"net_hourly": [24 priser], "elafgift": 0.008, "systemtarif": 0.07}` |
 | `history_days` | Hvor mange dages forbrug og priser der hentes første gang |
+| `consumption_kwh_per_100km` | Bilens forbrug (fx 18) – bruges til km og kr/km |
+| `petrol_l_per_100km` / `petrol_price_kr_per_l` | Den benzinbil, elbilen sammenlignes med (fx 6 l/100 km à 13,50 kr) |
 | `subscriptions_kr_per_month` | Faste abonnementer pr. måned **inkl. moms**, som de står på regningen, fx `{"Netabonnement": 26.25, "Andel Energi abonnement": 29}` |
 
 De øvrige felter (smart opladning, Tesla og notifikationer) er beskrevet nedenfor og kan stå tomme. Appen tjekker `config.json` ved start og fortæller præcist, hvilke felter der er forkerte.
@@ -123,7 +132,7 @@ sudo systemctl enable --now elopladning
 - **Smart** – appen lægger en plan med de billigste kvarterer, så bilen er klar til det klokkeslæt, du vælger. Planen ses også som blå søjler på priskurven.
 - **Lad nu** – lad med det samme.
 
-Hvor meget der skal lades, beregnes ud fra bilens batteriniveau og ladegrænse, hvis Tesla Fleet API er sat op (se nedenfor). Ellers skriver du selv, hvor mange kWh der skal lades i alt. Morgendagens priser offentliggøres ca. kl. 13; indtil da skønnes de ud fra dagens priser (markeret med ≈), og planen rettes til, når de rigtige priser kommer.
+Hvor meget der skal lades, beregnes ud fra bilens batteriniveau og dit mål i % (højst bilens ladegrænse), hvis Tesla Fleet API er sat op (se nedenfor). Ellers skriver du selv, hvor mange kWh der skal lades i alt. Morgendagens priser offentliggøres ca. kl. 13; indtil da skønnes de ud fra dagens priser (markeret med ≈), og planen rettes til, når de rigtige priser kommer.
 
 | Felt | Betydning |
 |---|---|

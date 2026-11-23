@@ -191,6 +191,65 @@ def add_subscriptions(rows, group, monthly_kr):
     return rows
 
 
+def typical_house_kw(meter_rows, ev_rows, ts):
+    """Husets typiske forbrug (kW) på dette tidspunkt af døgnet, ud fra de seneste
+    dages målinger minus elbilen. Bruges til et live-skøn, da Eloverblik halter."""
+    ev = {r["start"]: r["kwh"] for r in ev_rows}
+    d = local_dt(ts)
+    vals = []
+    for r in meter_rows:
+        rd = local_dt(r["start"])
+        if r["seconds"] == INTERVAL:
+            if (rd.hour, rd.minute // 15) != (d.hour, d.minute // 15):
+                continue
+            car = ev.get(r["start"], 0.0)
+        elif r["seconds"] == 3600 and rd.hour == d.hour:
+            car = sum(ev.get(r["start"] + i * INTERVAL, 0.0) for i in range(4))
+        else:
+            continue
+        vals.append(max(r["kwh"] - car, 0.0) * 3600 / r["seconds"])
+    return round(statistics.median(vals), 2) if vals else None
+
+
+def insights(ev_rows, prices, t0, t1, now, cfg):
+    """Nøgletal for elbilen i perioden [t0, t1): pris mod markedets snit,
+    andel ladet billigt, kr pr. km og sammenligning med benzin."""
+    end = min(t1, now)
+    rows = [r for r in ev_rows if t0 <= r["start"] < end and r["kwh"] > 0]
+    by_day = OrderedDict()
+    for t in range(t0, end - end % INTERVAL, INTERVAL):
+        p = prices.price(t)
+        if p is not None:
+            by_day.setdefault(local_dt(t).date(), []).append(p)
+    all_prices = [p for v in by_day.values() for p in v]
+    median = {d: statistics.median(v) for d, v in by_day.items()}
+    kwh = kr = cheap = 0.0
+    for r in rows:
+        p = prices.price(r["start"])
+        if p is None:
+            continue
+        kwh += r["kwh"]
+        kr += r["kwh"] * p
+        if p <= median.get(local_dt(r["start"]).date(), p):
+            cheap += r["kwh"]
+    market = sum(all_prices) / len(all_prices) if all_prices else None
+    paid = kr / kwh if kwh else None
+    cons = float(cfg["consumption_kwh_per_100km"])
+    km = kwh / cons * 100 if cons else 0.0
+    petrol_km = float(cfg["petrol_l_per_100km"]) * float(cfg["petrol_price_kr_per_l"]) / 100
+    r2 = lambda v, n=2: None if v is None else round(v, n)
+    return {
+        "kwh": round(kwh, 1), "kr": round(kr, 2),
+        "snitpris_bil": r2(paid, 3), "snitpris_marked": r2(market, 3),
+        "sparet_kr": r2((market - paid) * kwh if market is not None and paid is not None else None),
+        "billig_andel": r2(cheap / kwh if kwh else None, 3),
+        "km": round(km), "kr_pr_km": r2(kr / km if km else None, 3),
+        "benzin_kr_pr_km": round(petrol_km, 3),
+        "benzin_kr": round(km * petrol_km, 2),
+        "sparet_vs_benzin_kr": round(km * petrol_km - kr, 2),
+    }
+
+
 # ---------------------------------------------------------- ladesessioner ----
 
 def sessions(ev_rows, prices, min_kwh=0.5, max_gap=1800, window_h=14):
