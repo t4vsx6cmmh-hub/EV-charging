@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elopladning til biler</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --text:#1b1f24; --muted:#5f6b7a; --line:#e3e7ec;
+  --ev:#2f6fde; --house:#e0892b; --good:#1f9d55; --warn:#c9472b; --chip:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#101317; --card:#181c22; --text:#e8ecf1; --muted:#97a3b2; --line:#2a3038;
+    --ev:#5b93f0; --house:#f0a04b; --good:#3cc47a; --warn:#ee6a4f; --chip:#232932; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0}
+h2{font-size:16px;margin:0 0 12px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--chip);border-radius:99px;padding:3px 10px;font-size:12px;color:var(--muted)}
+.chip.ok::before{content:"● ";color:var(--good)} .chip.bad::before{content:"● ";color:var(--warn)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.big{font-size:30px;font-weight:650;margin:4px 0;font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);font-size:13px}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
+.row span:last-child{font-variant-numeric:tabular-nums}
+.ev{color:var(--ev)} .house{color:var(--house)} .good{color:var(--good)} .warn{color:var(--warn)}
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:2px}
+.seg button{border:0;background:none;color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+select,.btn{font:inherit;font-size:13px;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+.chart{position:relative;height:260px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500;font-size:12px}
+.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.errors{background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:none}
+.wide{margin-bottom:14px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <h1>Elopladning til biler</h1>
+    <div class="sub" id="subtitle">Elbilens opladning adskilt fra husets forbrug – med live elpriser</div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="errors" id="errors"></div>
+
+<section class="grid">
+  <div class="card">
+    <div class="label">Elpris lige nu</div>
+    <div class="big" id="priceNow">–</div>
+    <div class="sub">kr/kWh inkl. alt og moms</div>
+    <div id="priceParts" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <div class="label">Wall Connector</div>
+    <div class="big" id="wcState">–</div>
+    <div id="wcRows"></div>
+  </div>
+  <div class="card">
+    <div class="label">Billigste tidspunkt at lade</div>
+    <div class="big" id="cheapTime">–</div>
+    <div class="sub" id="cheapSub"></div>
+    <div style="margin-top:10px">
+      <select id="hours" aria-label="Ladetid">
+        <option value="2">2 timer (~22 kWh)</option>
+        <option value="3">3 timer (~33 kWh)</option>
+        <option value="4" selected>4 timer (~44 kWh)</option>
+        <option value="6">6 timer (~66 kWh)</option>
+      </select>
+    </div>
+  </div>
+</section>
+
+<section class="card wide">
+  <div class="toolbar"><h2 style="margin:0">Elpris i dag og i morgen</h2><span class="sub">kr/kWh pr. kvarter</span></div>
+  <div class="chart"><canvas id="priceChart"></canvas></div>
+</section>
+
+<section class="grid" id="totals"></section>
+
+<section class="card wide">
+  <div class="toolbar">
+    <h2 style="margin:0">Omkostning: elbil og hus</h2>
+    <div class="seg" id="groupSeg">
+      <button data-g="day" class="on">Pr. dag</button>
+      <button data-g="month">Pr. måned</button>
+    </div>
+  </div>
+  <div class="chart"><canvas id="costChart"></canvas></div>
+  <div class="scroll" style="margin-top:12px"><table id="costTable"></table></div>
+  <div class="note">Husets forbrug kommer fra Eloverblik, typisk med 1–2 døgns forsinkelse. Elbilens opladning måles live af Wall Connectoren. ≈ betyder at elbilens andel er skønnet ud fra måleren (før Wall Connector-logningen startede).</div>
+</section>
+
+<section class="card wide">
+  <h2>Ladesessioner</h2>
+  <div class="scroll"><table id="sessTable"></table></div>
+  <div class="note">“Billigst mulige” er prisen, hvis den samme mængde strøm var ladet i de billigste kvarterer inden for 14 timer efter tilslutning.</div>
+</section>
+
+<div class="toolbar"><span class="sub" id="footer"></span><button class="btn" id="syncBtn">Hent nye data</button></div>
+</main>
+
+<script src="vendor/chart.umd.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const kr = (v, d=2) => v == null ? "–" : v.toLocaleString("da-DK",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtTime = t => new Date(t*1000).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit"});
+const fmtDay = t => new Date(t*1000).toLocaleDateString("da-DK",{weekday:"short",day:"numeric",month:"short"});
+let group = "day", priceChart, costChart;
+
+async function j(url, opt){ const r = await fetch(url, opt); return r.json(); }
+
+function chartDefaults(){
+  Chart.defaults.color = css("--muted");
+  Chart.defaults.borderColor = css("--line");
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+}
+
+async function loadStatus(){
+  const s = await j("/api/status");
+  const p = s.pris_nu;
+  $("priceNow").textContent = p ? kr(p.total) : "–";
+  $("priceParts").innerHTML = p ? [
+    ["Spotpris", p.spot], ["Andel Energi tillæg", p.tillaeg], ["Net- og statstariffer", p.tariffer]
+  ].map(([n,v]) => `<div class="row"><span class="sub">${n} (ekskl. moms)</span><span>${kr(v,3)}</span></div>`).join("") : "";
+
+  const wc = s.wall_connector;
+  if(!s.konfigureret.wall_connector){ $("wcState").textContent = "Ikke sat op"; $("wcRows").innerHTML = ""; }
+  else if(!wc.online){ $("wcState").textContent = "Ingen forbindelse"; $("wcRows").innerHTML = `<div class="sub">Tjek IP-adressen i config.json</div>`; }
+  else {
+    $("wcState").innerHTML = wc.lader ? `<span class="ev">Lader · ${kr(wc.effekt_kw,1)} kW</span>` : (wc.bil_tilsluttet ? "Tilsluttet" : "Ledig");
+    const est = p ? wc.session_kwh * p.total : null;
+    $("wcRows").innerHTML = wc.bil_tilsluttet ? `
+      <div class="row"><span class="sub">Denne session</span><span>${kr(wc.session_kwh,1)} kWh</span></div>
+      <div class="row"><span class="sub">Varighed</span><span>${Math.floor(wc.session_min/60)} t ${wc.session_min%60} min</span></div>
+      <div class="row"><span class="sub">Ved nuværende pris</span><span>≈ ${kr(est)} kr</span></div>` : "";
+  }
+
+  const chips = [];
+  if(s.demo) chips.push(`<span class="chip">DEMO-data</span>`);
+  chips.push(`<span class="chip ${s.fejl.wall_connector ? "bad":"ok"}">Wall Connector</span>`);
+  chips.push(`<span class="chip ${s.fejl.eloverblik || !s.konfigureret.eloverblik ? "bad":"ok"}">Eloverblik</span>`);
+  chips.push(`<span class="chip ${s.fejl.spotpriser ? "bad":"ok"}">Spotpriser</span>`);
+  $("chips").innerHTML = chips.join("");
+
+  const errs = Object.entries(s.fejl);
+  const warns = [];
+  if(!s.tariffer.length) warns.push("Ingen tariffer endnu – priserne er uden nettarif og afgifter, indtil Eloverblik er hentet (eller manual_tariffs er udfyldt).");
+  if(!s.konfigureret.tillaeg_kr && !s.demo) warns.push("Andel Energis tillæg er sat til 0 – udfyld supplier_addon_kr_per_kwh i config.json ud fra din regning.");
+  $("errors").style.display = errs.length || warns.length ? "block" : "none";
+  $("errors").innerHTML = errs.map(([k,v]) => `<div><b>${k}:</b> ${v}</div>`).join("") + warns.map(w => `<div>${w}</div>`).join("");
+
+  const ls = s.sidste_sync;
+  $("footer").textContent = Object.keys(ls).length ? "Senest hentet: " + Object.entries(ls).map(([k,t]) => `${k.replace("_"," ")} ${fmtTime(t)}`).join(" · ") : "";
+}
+
+async function loadPrices(){
+  const d = await j("/api/prices?timer=" + $("hours").value);
+  const b = d.billigste_blok;
+  if(b){
+    const sameDay = new Date(b.start*1000).toDateString() === new Date().toDateString();
+    $("cheapTime").textContent = `${fmtTime(b.start)}–${fmtTime(b.slut)}`;
+    $("cheapSub").textContent = `${sameDay ? "i dag" : fmtDay(b.start)} · gns. ${kr(b.gns_kr_pr_kwh)} kr/kWh`;
+  } else { $("cheapTime").textContent = "–"; $("cheapSub").textContent = "Ingen priser endnu"; }
+
+  const pts = d.priser;
+  const nowIdx = pts.findIndex(p => p.t <= d.nu && d.nu < p.t + 900);
+  const vals = pts.map(p => p.total);
+  const sorted = [...vals].sort((a,b)=>a-b);
+  const lo = sorted[Math.floor(sorted.length*0.33)], hi = sorted[Math.floor(sorted.length*0.66)];
+  const colors = vals.map((v,i) => {
+    const c = v <= lo ? css("--good") : v >= hi ? css("--warn") : css("--house");
+    return i < nowIdx ? c + "55" : c;
+  });
+  const labels = pts.map(p => { const dt = new Date(p.t*1000); return dt.getMinutes() === 0 && dt.getHours() === 0 ? fmtDay(p.t) : fmtTime(p.t); });
+  const data = {labels, datasets:[{data: vals, backgroundColor: colors, borderWidth:0, barPercentage:1, categoryPercentage:.92}]};
+  const nowLine = {id:"now", afterDatasetsDraw(c){ if(nowIdx<0) return; const x = c.scales.x.getPixelForValue(nowIdx);
+    const {top,bottom} = c.chartArea; const g = c.ctx; g.save(); g.strokeStyle = css("--text"); g.setLineDash([4,3]);
+    g.beginPath(); g.moveTo(x,top); g.lineTo(x,bottom); g.stroke(); g.restore(); }};
+  if(priceChart){ priceChart.data = data; priceChart.update(); return; }
+  priceChart = new Chart($("priceChart"), {type:"bar", data, plugins:[nowLine], options:{
+    maintainAspectRatio:false, animation:false, plugins:{legend:{display:false},
+      tooltip:{callbacks:{title:i => fmtDay(pts[i[0].dataIndex].t)+" "+fmtTime(pts[i[0].dataIndex].t),
+        label:i => { const p = pts[i.dataIndex]; return [`I alt: ${kr(p.total)} kr/kWh`, `Spot: ${kr(p.spot,3)}`, `Tariffer: ${kr(p.tariffer,3)}`]; }}}},
+    scales:{x:{grid:{display:false}, ticks:{autoSkip:false, maxRotation:0,
+      callback:(v,i) => { const dt = new Date(pts[i].t*1000); return dt.getMinutes()===0 && dt.getHours()%6===0 ? labels[i] : ""; }}},
+      y:{beginAtZero:true, ticks:{callback:v => kr(v)}}}}});
+}
+
+async function loadSummary(){
+  const rows = await j(`/api/summary?group=${group}&antal=${group==="day"?31:12}`);
+  const name = r => group === "day"
+    ? new Date(r.periode+"T12:00").toLocaleDateString("da-DK",{day:"numeric",month:"short"})
+    : new Date(r.periode+"-15").toLocaleDateString("da-DK",{month:"short",year:"numeric"});
+  const data = {labels: rows.map(name), datasets:[
+    {label:"Elbil", data: rows.map(r=>r.elbil_kr), backgroundColor: css("--ev"), stack:"s", borderRadius:2},
+    {label:"Hus", data: rows.map(r=>r.hus_kr), backgroundColor: css("--house"), stack:"s", borderRadius:2},
+  ]};
+  if(costChart){ costChart.data = data; costChart.update(); }
+  else costChart = new Chart($("costChart"), {type:"bar", data, options:{maintainAspectRatio:false, animation:false,
+    plugins:{legend:{position:"top", align:"end", labels:{boxWidth:12}},
+      tooltip:{callbacks:{label:i => `${i.dataset.label}: ${kr(i.raw)} kr`}}},
+    scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, ticks:{callback:v=>kr(v,0)+" kr"}}}}});
+
+  $("costTable").innerHTML = `<tr><th>${group==="day"?"Dag":"Måned"}</th><th class="ev">Elbil kWh</th><th class="ev">Elbil kr</th><th class="ev">kr/kWh</th><th class="house">Hus kWh</th><th class="house">Hus kr</th><th>I alt kr</th></tr>` +
+    [...rows].reverse().map(r => `<tr><td>${name(r)}</td>
+      <td>${r.elbil_estimeret?"≈ ":""}${kr(r.elbil_kwh,1)}</td><td>${r.elbil_estimeret?"≈ ":""}${kr(r.elbil_kr)}</td>
+      <td>${r.elbil_kwh>0.1?kr(r.elbil_kr/r.elbil_kwh):"–"}</td>
+      <td>${r.maaler_data?kr(r.hus_kwh,1):'<span class="sub">afventer</span>'}</td>
+      <td>${r.maaler_data?kr(r.hus_kr):'<span class="sub">afventer</span>'}</td><td>${kr(r.total_kr)}</td></tr>`).join("");
+
+  // Nøgletal for indeværende måned
+  const m = await j("/api/summary?group=month&antal=2");
+  const cur = m[m.length-1] || {}, prev = m.length > 1 ? m[0] : null;
+  const evAvg = cur.elbil_kwh ? cur.elbil_kr / cur.elbil_kwh : null;
+  const houseAvg = cur.hus_kwh ? cur.hus_kr / cur.hus_kwh : null;
+  $("totals").innerHTML = `
+    <div class="card"><div class="label">Elbil denne måned</div><div class="big ev">${kr(cur.elbil_kr,0)} kr</div>
+      <div class="sub">${kr(cur.elbil_kwh,0)} kWh · gns. ${kr(evAvg)} kr/kWh</div>
+      ${prev?`<div class="sub">Sidste måned: ${kr(prev.elbil_kr,0)} kr</div>`:""}</div>
+    <div class="card"><div class="label">Hus denne måned</div><div class="big house">${kr(cur.hus_kr,0)} kr</div>
+      <div class="sub">${kr(cur.hus_kwh,0)} kWh · gns. ${kr(houseAvg)} kr/kWh</div>
+      ${prev?`<div class="sub">Sidste måned: ${kr(prev.hus_kr,0)} kr</div>`:""}</div>
+    <div class="card"><div class="label">Elbilens andel</div><div class="big">${cur.total_kr?Math.round(100*cur.elbil_kr/cur.total_kr):0} %</div>
+      <div class="sub">af månedens elregning (ekskl. abonnementer)</div></div>`;
+}
+
+async function loadSessions(){
+  const ss = await j("/api/sessions?dage=60");
+  const total = ss.reduce((a,s)=>a+(s.mulig_besparelse_kr||0),0);
+  $("sessTable").innerHTML = `<tr><th>Start</th><th>Slut</th><th>kWh</th><th>Pris</th><th>kr/kWh</th><th>Billigst mulige</th><th>Mulig besparelse</th></tr>` +
+    ss.slice(0,40).map(s => `<tr><td>${fmtDay(s.start)} ${fmtTime(s.start)}</td><td>${fmtTime(s.slut)}</td>
+      <td>${kr(s.kwh,1)}</td><td>${kr(s.kr)} kr</td><td>${kr(s.kr_pr_kwh)}</td><td>${kr(s.billigst_mulige_kr)} kr</td>
+      <td class="${s.mulig_besparelse_kr>5?"warn":"good"}">${kr(s.mulig_besparelse_kr)} kr</td></tr>`).join("") +
+    (ss.length ? `<tr><td colspan="6"><b>Samlet mulig besparelse, 60 dage</b></td><td><b>${kr(total)} kr</b></td></tr>` :
+      `<tr><td colspan="7" class="sub" style="text-align:left">Ingen sessioner registreret endnu.</td></tr>`);
+}
+
+$("groupSeg").addEventListener("click", e => {
+  if(!e.target.dataset.g) return;
+  group = e.target.dataset.g;
+  [...$("groupSeg").children].forEach(b => b.classList.toggle("on", b === e.target));
+  loadSummary();
+});
+$("hours").addEventListener("change", loadPrices);
+$("syncBtn").addEventListener("click", async () => {
+  $("syncBtn").disabled = true; await j("/api/sync",{method:"POST"});
+  setTimeout(() => { $("syncBtn").disabled = false; refreshAll(); }, 4000);
+});
+
+function refreshAll(){ loadStatus(); loadPrices(); loadSummary(); loadSessions(); }
+chartDefaults();
+refreshAll();
+setInterval(loadStatus, 15000);
+setInterval(() => { loadPrices(); loadSummary(); loadSessions(); }, 5*60000);
+</script>
+</body>
+</html>

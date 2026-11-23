@@ -1,0 +1,14 @@
+{
+  "wall_connector_host": "192.168.1.50",
+  "eloverblik_refresh_token": "INDSÆT_DIT_TOKEN_FRA_ELOVERBLIK_HER",
+  "metering_point_id": "",
+  "price_area": "DK2",
+  "supplier_addon_kr_per_kwh": 0.0,
+  "vat": 0.25,
+  "manual_tariffs": null,
+  "poll_seconds": 30,
+  "history_days": 90,
+  "ev_detect_kw": 5.0,
+  "port": 8080,
+  "db_path": "elopladning.db"
+}
