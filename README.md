@@ -190,4 +190,4 @@ Testene kører automatisk på GitHub (Python 3.9–3.13, Linux og Windows) ved h
 
 ## Licens
 
-Chart.js (MIT) er inkluderet i `static/vendor/`.
+Chart.js (MIT) og skrifttypen Inter (SIL Open Font License) er inkluderet i `static/vendor/`, så dashboardet virker uden internet.
