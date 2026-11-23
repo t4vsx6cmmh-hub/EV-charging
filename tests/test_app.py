@@ -44,6 +44,16 @@ class ConfigTest(unittest.TestCase):
             for key in ("price_area", "vat", "port", "wall_connector_host", "net_hourly"):
                 self.assertIn(key, msg)
 
+    def test_tls_and_origins_validation(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(ConfigError) as cm:
+                load_config(self.write(d, {"tls_cert_file": "cert.pem",
+                                           "allowed_origins": ["pi.local/"]}))
+            self.assertIn("tls_key_file", str(cm.exception))
+            self.assertIn("allowed_origins", str(cm.exception))
+            cfg = load_config(self.write(d, {"tls_cert_file": "c.pem", "tls_key_file": "k.pem"}))
+            self.assertEqual(cfg["tls_cert_file"], os.path.join(d, "c.pem"))
+
     def test_invalid_json(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(ConfigError) as cm:
@@ -98,7 +108,7 @@ class AppTest(unittest.TestCase):
                                    method="POST" if data is not None else "GET")
         try:
             with urllib.request.urlopen(r, timeout=10) as resp:
-                raw = resp.read().decode("utf-8")
+                raw = resp.read().decode("utf-8", "replace")
                 return resp.status, resp.headers, raw
         except urllib.error.HTTPError as e:
             return e.code, e.headers, e.read().decode("utf-8")
@@ -144,6 +154,44 @@ class AppTest(unittest.TestCase):
         self.assertEqual(len(raw.strip().splitlines()), 3)
         code, _, raw = self.req("/api/export.csv?type=sessioner&dage=30")
         self.assertTrue(raw.lstrip("﻿").startswith("Start;Slut;kWh"))
+
+    def test_app_files_served_for_install(self):
+        code, headers, raw = self.req("/manifest.webmanifest")
+        self.assertEqual(code, 200)
+        self.assertEqual(headers["Content-Type"], "application/manifest+json")
+        manifest = json.loads(raw)
+        self.assertEqual(manifest["display"], "standalone")
+        sizes = {i["sizes"] for i in manifest["icons"]}
+        self.assertTrue({"192x192", "512x512"} <= sizes)
+        for icon in manifest["icons"] + [{"src": "icons/apple-touch-icon.png"}]:
+            code, headers, _ = self.req("/" + icon["src"])
+            self.assertEqual((code, headers["Content-Type"]), (200, "image/png"), icon["src"])
+        code, headers, raw = self.req("/sw.js")
+        self.assertEqual(code, 200)
+        self.assertIn("javascript", headers["Content-Type"])
+        self.assertEqual(headers["Cache-Control"], "no-cache")
+        self.assertIn("X-Fra-Cache", raw)
+        code, _, html = self.req("/")
+        self.assertIn('rel="manifest"', html)
+
+    def test_allowed_origin(self):
+        app = self.app
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(App(
+            dict(app.cfg, allowed_origins=["https://pi.eksempel.ts.net"]), demo=True)))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base, self.base = self.base, f"http://127.0.0.1:{srv.server_address[1]}"
+        try:
+            ok = self.req("/api/smart", {"mode": "off"}, headers={"Origin": "https://pi.eksempel.ts.net"})
+            self.assertEqual(ok[0], 200)
+            proxied = self.req("/api/smart", {"mode": "off"},
+                               headers={"Origin": "https://andet.ts.net", "X-Forwarded-Host": "andet.ts.net"})
+            self.assertEqual(proxied[0], 200)
+            self.assertEqual(self.req("/api/smart", {"mode": "off"},
+                                      headers={"Origin": "https://ond.example"})[0], 403)
+        finally:
+            self.base = base
+            srv.shutdown()
+            srv.server_close()
 
     def test_post_requires_json_and_same_origin(self):
         self.assertEqual(self.req("/api/smart", {"mode": "off"}, ctype="text/plain")[0], 415)

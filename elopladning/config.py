@@ -24,6 +24,9 @@ DEFAULTS = {
     "listen_host": "0.0.0.0",
     "port": 8080,
     "db_path": "elopladning.db",
+    "tls_cert_file": "",
+    "tls_key_file": "",
+    "allowed_origins": [],
     # Smart opladning
     "charge_kw": 11.0,
     "battery_kwh": 75.0,
@@ -90,8 +93,13 @@ def validate(cfg):
                 "listen_host", "db_path", "tesla_client_id", "tesla_client_secret",
                 "tesla_redirect_uri", "tesla_refresh_token", "tesla_vin", "tesla_api_base",
                 "tesla_command_proxy", "tesla_proxy_ca_file", "ntfy_topic", "ntfy_server",
-                "ntfy_token"):
+                "ntfy_token", "tls_cert_file", "tls_key_file"):
         text(key)
+    if bool(cfg.get("tls_cert_file")) != bool(cfg.get("tls_key_file")):
+        errs.append("tls_cert_file og tls_key_file skal udfyldes begge to (eller ingen af dem)")
+    ao = cfg.get("allowed_origins")
+    if not isinstance(ao, list) or not all(isinstance(o, str) and re.fullmatch(r"https?://[^/\s]+", o) for o in ao):
+        errs.append('allowed_origins: skal være en liste som ["https://pi.mit-netvaerk.ts.net"] (uden / til sidst)')
     text("price_area", choices=("DK1", "DK2"))
     text("tesla_region", choices=("eu", "na"))
     text("smart_default_ready", pattern=r"([01]?\d|2[0-3]):[0-5]\d")
@@ -156,5 +164,7 @@ def load_config(path):
             log.warning("Ukendte felter i config.json ignoreres: %s", ", ".join(unknown))
         cfg.update({k: v for k, v in user.items() if k in DEFAULTS})
     validate(cfg)
-    cfg["db_path"] = os.path.join(base, cfg["db_path"])
+    for key in ("db_path", "tls_cert_file", "tls_key_file"):
+        if cfg[key]:
+            cfg[key] = os.path.join(base, cfg[key])
     return cfg

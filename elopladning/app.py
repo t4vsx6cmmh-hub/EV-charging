@@ -8,6 +8,7 @@ import argparse
 import json
 import logging
 import os
+import ssl
 import threading
 import time
 import traceback
@@ -311,9 +312,21 @@ def _float(q, key, default, lo, hi):
 
 
 def make_handler(app):
+    allowed = set(app.cfg.get("allowed_origins") or [])
+
     class Handler(SimpleHTTPRequestHandler):
+        extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
+                          ".webmanifest": "application/manifest+json",
+                          ".woff2": "font/woff2", ".js": "text/javascript"}
+
         def __init__(self, *a, **kw):
             super().__init__(*a, directory=STATIC, **kw)
+
+        def end_headers(self):
+            # Filer hentes altid på ny ved næste besøg (service workeren klarer offline)
+            if not self.path.startswith("/api/"):
+                self.send_header("Cache-Control", "no-cache")
+            super().end_headers()
 
         def log_message(self, fmt, *args):
             log.debug(fmt, *args)
@@ -336,8 +349,10 @@ def make_handler(app):
             # Kræv JSON: så kan en fremmed hjemmeside ikke sende en "simpel" formular
             # til appen fra din browser (CSRF), og Origin skal passe hvis den sendes.
             origin = self.headers.get("Origin")
-            if origin and urlparse(origin).netloc != self.headers.get("Host"):
-                raise Forbidden("Forespørgsel fra en anden side afvist")
+            if origin and origin not in allowed and urlparse(origin).netloc not in (
+                    self.headers.get("Host"), self.headers.get("X-Forwarded-Host")):
+                raise Forbidden("Forespørgsel fra en anden side afvist – tilføj adressen "
+                                "til allowed_origins i config.json, hvis det er dig")
             ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
             if ctype != "application/json":
                 raise UnsupportedMedia("Content-Type skal være application/json")
@@ -443,7 +458,16 @@ def main():
     except OSError as e:
         raise SystemExit(f"Kan ikke starte på port {cfg['port']}: {e}. "
                          "Kører appen allerede? Ellers vælg en anden port med --port.")
-    log.info("Dashboard kører på http://localhost:%s", cfg["port"])
+    scheme = "http"
+    if cfg["tls_cert_file"]:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        try:
+            ctx.load_cert_chain(cfg["tls_cert_file"], cfg["tls_key_file"])
+        except (OSError, ssl.SSLError) as e:
+            raise SystemExit(f"Kan ikke læse certifikatet: {e}")
+        srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
+        scheme = "https"
+    log.info("Dashboard kører på %s://localhost:%s", scheme, cfg["port"])
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

@@ -31,6 +31,7 @@ Dashboardet viser:
 - hver ladesession med pris og hvad den *kunne* have kostet, hvis den var ladet i de billigste kvarterer
 - **smart opladning**: en plan for de billigste kvarterer inden fx kl. 07 – og med Tesla Fleet API starter og stopper appen selv opladningen
 - **notifikationer** på telefonen, når opladningen stopper, når morgendagens priser kommer, og hvis noget holder op med at virke
+- **app på telefonen**: installér dashboardet på hjemmeskærmen – det åbner i fuld skærm og viser seneste tal, også uden forbindelse
 - **CSV-eksport** pr. dag, måned og ladesession (fx til refusion fra arbejdsgiver) og **faste abonnementer** med i månedsregningen
 
 For perioder **før** appen blev startet (hvor Wall Connectoren ikke er logget), skønner appen elbilens andel ud fra elmåleren: længere perioder med over 5 kW forbrug regnes som opladning. Disse tal er markeret med ≈.
@@ -161,6 +162,27 @@ Kører du din egen ntfy-server, så sæt `ntfy_server` og evt. `ntfy_token`.
 ## Eksport og abonnementer
 
 Knapperne **Eksportér CSV** henter tabellerne som CSV med semikolon og decimalkomma, så de åbner direkte i dansk Excel og Numbers. Med `subscriptions_kr_per_month` udfyldt viser tabellen også abonnementerne og hele regningen; pr. dag fordeles månedsbeløbet på månedens dage.
+
+## Installér som app på telefonen
+
+Dashboardet er en såkaldt web-app (PWA): den lægges på hjemmeskærmen med eget ikon og åbner i fuld skærm uden adresselinje – ingen App Store nødvendig.
+
+**iPhone/iPad (Safari):** åbn `http://<computerens-ip>:8080`, tryk på **Del** (firkanten med pilen) → **Føj til hjemmeskærm** → **Tilføj**. Knappen **Installér app** i dashboardet viser samme vejledning.
+
+**Android (Chrome):** tryk **Installér app** i dashboardet, eller menuen ⋮ → **Installér app**.
+
+Fuld app-funktion – installation på Android og visning af seneste tal uden forbindelse – kræver, at dashboardet åbnes via **https**. Over almindelig http på hjemmenetværket virker genvejen på hjemmeskærmen stadig, men uden offline-visning (og på Android som en almindelig browser-genvej).
+
+### https og adgang hjemmefra med Tailscale (anbefalet)
+
+[Tailscale](https://tailscale.com) er gratis til privat brug og giver en sikker forbindelse til appen – også når du ikke er hjemme – uden at åbne noget mod internettet:
+
+1. Installér Tailscale på computeren med appen og på telefonen, og log ind med samme konto.
+2. På computeren: `tailscale serve --bg 8080`
+3. Åbn den viste adresse (fx `https://pi.tail1234.ts.net`) på telefonen og installér appen derfra.
+4. Skriv adressen i `config.json`: `"allowed_origins": ["https://pi.tail1234.ts.net"]`.
+
+Har du selv et certifikat (fx fra `tailscale cert`), kan appen også køre https direkte med `tls_cert_file` og `tls_key_file`.
 
 ## Docker
 
