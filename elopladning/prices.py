@@ -5,9 +5,9 @@ ligger i datasættet 'DayAheadPrices'. Ældre timepriser ligger i 'Elspotprices'
 """
 import json
 import urllib.parse
-import urllib.request
 from datetime import date
 
+from .net import request_json
 from .timeutil import parse_iso_utc
 
 BASE = "https://api.energidataservice.dk/dataset/"
@@ -22,10 +22,7 @@ def _fetch(dataset, start, end, area):
         "sort": "TimeUTC asc" if dataset == "DayAheadPrices" else "HourUTC asc",
         "limit": 0,
     })
-    req = urllib.request.Request(BASE + dataset + "?" + q,
-                                 headers={"User-Agent": "elopladning-til-biler"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode()).get("records", [])
+    return request_json(BASE + dataset + "?" + q, timeout=30).get("records", [])
 
 
 def parse_dayahead(records):

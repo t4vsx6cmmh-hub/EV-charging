@@ -29,6 +29,9 @@ Dashboardet viser:
 - det billigste tidspunkt at lade i de næste døgn
 - kroner og kWh for elbil og hus pr. dag og pr. måned
 - hver ladesession med pris og hvad den *kunne* have kostet, hvis den var ladet i de billigste kvarterer
+- **smart opladning**: en plan for de billigste kvarterer inden fx kl. 07 – og med Tesla Fleet API starter og stopper appen selv opladningen
+- **notifikationer** på telefonen, når opladningen stopper, når morgendagens priser kommer, og hvis noget holder op med at virke
+- **CSV-eksport** pr. dag, måned og ladesession (fx til refusion fra arbejdsgiver) og **faste abonnementer** med i månedsregningen
 
 For perioder **før** appen blev startet (hvor Wall Connectoren ikke er logget), skønner appen elbilens andel ud fra elmåleren: længere perioder med over 5 kW forbrug regnes som opladning. Disse tal er markeret med ≈.
 
@@ -75,6 +78,9 @@ cp config.example.json config.json
 | `metering_point_id` | Tom = vælg automatisk dit forbrugsmålepunkt |
 | `manual_tariffs` | Normalt `null`. Hvis Eloverblik ikke giver tariffer, kan de skrives ind: `{"net_hourly": [24 priser], "elafgift": 0.008, "systemtarif": 0.07}` |
 | `history_days` | Hvor mange dages forbrug og priser der hentes første gang |
+| `subscriptions_kr_per_month` | Faste abonnementer pr. måned **inkl. moms**, som de står på regningen, fx `{"Netabonnement": 26.25, "Andel Energi abonnement": 29}` |
+
+De øvrige felter (smart opladning, Tesla og notifikationer) er beskrevet nedenfor og kan stå tomme. Appen tjekker `config.json` ved start og fortæller præcist, hvilke felter der er forkerte.
 
 ### 7. Start
 
@@ -108,19 +114,79 @@ WantedBy=multi-user.target
 sudo systemctl enable --now elopladning
 ```
 
+## Smart opladning
+
+Øverst i dashboardet vælger du:
+
+- **Fra** – appen rører ikke bilen (planen vises stadig som inspiration).
+- **Smart** – appen lægger en plan med de billigste kvarterer, så bilen er klar til det klokkeslæt, du vælger. Planen ses også som blå søjler på priskurven.
+- **Lad nu** – lad med det samme.
+
+Hvor meget der skal lades, beregnes ud fra bilens batteriniveau og ladegrænse, hvis Tesla Fleet API er sat op (se nedenfor). Ellers skriver du selv, hvor mange kWh der skal lades i alt. Morgendagens priser offentliggøres ca. kl. 13; indtil da skønnes de ud fra dagens priser (markeret med ≈), og planen rettes til, når de rigtige priser kommer.
+
+| Felt | Betydning |
+|---|---|
+| `charge_kw` | Ladeeffekt (11 kW for 3×16 A) |
+| `battery_kwh` | Batteriets brugbare størrelse, fx 75 (Model Y Long Range) |
+| `charge_efficiency` | Hvor stor en del af strømmen der ender i batteriet (typisk 0,9) |
+| `smart_default_ready` / `smart_default_kwh` | Udgangspunkt for "klar kl." og kWh – kan ændres i dashboardet |
+
+**Uden Tesla Fleet API** er planen en anbefaling: sæt fx "planlagt opladning" i Tesla-appen til starttidspunktet. Wall Connectorens lokale API kan kun læse data, ikke starte/stoppe.
+
+### Lad appen styre bilen (Tesla Fleet API)
+
+1. Opret en app på [developer.tesla.com](https://developer.tesla.com) med scopes *Vehicle Information* og *Vehicle Charging Management*. Angiv en redirect-adresse (fx `https://localhost/callback` – siden behøver ikke findes). Følg Teslas vejledning for at registrere appen ("partner account" med en offentlig nøgle på dit domæne).
+2. Skriv `tesla_client_id`, `tesla_client_secret` og `tesla_redirect_uri` i `config.json` (`tesla_region`: `eu` i Danmark).
+3. Kør `python3 -m elopladning --tesla-login`, åbn adressen, log ind og indsæt adressen, du ender på. Adgangen gemmes i databasen og fornyes automatisk.
+4. Nyere biler kræver **signerede kommandoer**: kør Teslas [`tesla-http-proxy`](https://github.com/teslamotors/vehicle-command) på samme computer, og sæt `tesla_command_proxy` til fx `https://localhost:4443` og `tesla_proxy_ca_file` til proxyens certifikat. Batteridata hentes stadig direkte.
+
+Tesla tager betaling pr. kald til Fleet API (der er et gratis månedligt beløb). Appen holder kaldene nede: batteriet læses højst hver halve time, mens bilen er sat til, og en kommando gentages tidligst efter 10 minutter.
+
+## Notifikationer
+
+Appen sender beskeder via [ntfy](https://ntfy.sh) – en gratis app til iPhone og Android, uden konto.
+
+1. Installer ntfy og abonnér på et hemmeligt emne, som andre ikke kan gætte, fx `elopladning-k8f2x9q`.
+2. Skriv emnet i `ntfy_topic`. Tryk **Send testnotifikation** nederst i dashboardet.
+
+| Felt | Besked |
+|---|---|
+| `notify_session_end` | Når opladningen stopper: kWh, pris og kr/kWh |
+| `notify_smart_plan` | Når bilen sættes til i smart-tilstand: planen og hvad den sparer |
+| `notify_tomorrow_prices` | Når morgendagens priser er ude: billigste `notify_block_hours` timer, laveste og højeste pris – og perioder under `notify_price_below` kr/kWh, hvis det er sat |
+| `notify_errors` | Hvis Wall Connector, Eloverblik eller spotpriser har fejlet i over 2 timer (og når det virker igen) |
+
+Kører du din egen ntfy-server, så sæt `ntfy_server` og evt. `ntfy_token`.
+
+## Eksport og abonnementer
+
+Knapperne **Eksportér CSV** henter tabellerne som CSV med semikolon og decimalkomma, så de åbner direkte i dansk Excel og Numbers. Med `subscriptions_kr_per_month` udfyldt viser tabellen også abonnementerne og hele regningen; pr. dag fordeles månedsbeløbet på månedens dage.
+
+## Docker
+
+```bash
+mkdir data && cp config.example.json data/config.json   # udfyld data/config.json
+docker compose up -d
+```
+
+Config og database ligger i `data/`. Brug `docker compose run --rm elopladning python -m elopladning --tesla-login` til Tesla-login.
+
 ## Godt at vide
 
 - **Eloverblik halter 1–2 døgn.** Husets forbrug for i dag og i går vises som "afventer". Elbilens opladning ses med det samme.
 - **Abonnementer og faste gebyrer** (net- og elselskabsabonnement) er ikke med. Appen fordeler kun det, der betales pr. kWh.
 - **Tarifferne** hentes én gang i døgnet. Ændrer netselskabet tarif (fx skift mellem sommer- og vintertarif), bruges den nye pris også bagud i tid, indtil den er hentet. Det giver kun en lille afvigelse.
 - **Wall Connectoren** måler lidt anderledes end elmåleren. Hvis den måler mere end elmåleren i et kvarter, skaleres elbilen ned til målerens tal.
-- **Til familie og venner:** hver husstand kører sin egen kopi med egen Wall Connector og eget Eloverblik-token. Ingen data forlader jeres hjemmenetværk ud over kaldene til Energinet.
+- **Til familie og venner:** hver husstand kører sin egen kopi med egen Wall Connector og eget Eloverblik-token. Ingen data forlader jeres hjemmenetværk ud over kaldene til Energinet (og Tesla/ntfy, hvis de er slået til).
+- **Sikkerhed:** dashboardet har intet login – alle på hjemmenetværket kan se det og skifte opladningstilstand. Gør det ikke tilgængeligt fra internettet (ingen port-forwarding); brug fx VPN til hjemmet. Med `"listen_host": "127.0.0.1"` kan det kun åbnes fra computeren selv.
 
 ## Test
 
 ```bash
 python3 -m unittest discover tests
 ```
+
+Testene kører automatisk på GitHub (Python 3.9–3.13, Linux og Windows) ved hvert push.
 
 ## Licens
 

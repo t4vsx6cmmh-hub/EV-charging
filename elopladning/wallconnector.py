@@ -4,15 +4,13 @@ Endpoints (ingen login):
   http://<ip>/api/1/vitals    – live: bil tilsluttet, strøm, spænding, sessionens energi
   http://<ip>/api/1/lifetime  – samlet tæller: energy_wh
 """
-import json
-import urllib.request
-
+from .net import request_json
 from .timeutil import INTERVAL
 
 
 def _get(host, path, timeout=5):
-    with urllib.request.urlopen(f"http://{host}{path}", timeout=timeout) as r:
-        return json.loads(r.read().decode())
+    # Ingen genforsøg: appen spørger alligevel igen om lidt
+    return request_json(f"http://{host}{path}", timeout=timeout, retries=0)
 
 
 def read_vitals(host):

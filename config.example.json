@@ -1,4 +1,6 @@
 {
+  "_kommentar": "Se README.md for forklaring af hvert felt. Felter der starter med _ ignoreres.",
+
   "wall_connector_host": "192.168.1.50",
   "eloverblik_refresh_token": "INDSÆT_DIT_TOKEN_FRA_ELOVERBLIK_HER",
   "metering_point_id": "",
@@ -6,9 +8,41 @@
   "supplier_addon_kr_per_kwh": 0.0,
   "vat": 0.25,
   "manual_tariffs": null,
+  "subscriptions_kr_per_month": {
+    "Netabonnement": 0.0,
+    "Andel Energi abonnement": 0.0
+  },
   "poll_seconds": 30,
   "history_days": 90,
   "ev_detect_kw": 5.0,
+
+  "listen_host": "0.0.0.0",
   "port": 8080,
-  "db_path": "elopladning.db"
+  "db_path": "elopladning.db",
+
+  "charge_kw": 11.0,
+  "battery_kwh": 75.0,
+  "charge_efficiency": 0.9,
+  "smart_default_ready": "07:00",
+  "smart_default_kwh": 30,
+
+  "tesla_client_id": "",
+  "tesla_client_secret": "",
+  "tesla_redirect_uri": "",
+  "tesla_refresh_token": "",
+  "tesla_vin": "",
+  "tesla_region": "eu",
+  "tesla_api_base": "",
+  "tesla_command_proxy": "",
+  "tesla_proxy_ca_file": "",
+
+  "ntfy_topic": "",
+  "ntfy_server": "https://ntfy.sh",
+  "ntfy_token": "",
+  "notify_session_end": true,
+  "notify_smart_plan": true,
+  "notify_tomorrow_prices": true,
+  "notify_block_hours": 4,
+  "notify_price_below": null,
+  "notify_errors": true
 }

@@ -68,20 +68,49 @@ def seed(app):
     db.upsert_spot(spot_rows)
     db.upsert_meter(meter_rows)
     db.add_ev_kwh({t: k for t, k in ev.items() if t < now})
+    db.set_kv("smart_settings", {"mode": "smart", "klar_kl": "07:00", "kwh": 30.0})
     app.last_sync = {"spotpriser": now, "eloverblik_forbrug": now}
 
 
-def live_loop(app):
-    """Simulér at bilen lader nu."""
-    session_wh, started = 0.0, time.time()
+class DemoCar:
+    """Simuleret bil, som smart opladning kan starte og stoppe."""
+    def __init__(self, level=46.0, limit=80):
+        self.charging = True
+        self.level = level
+        self.limit = limit
+
+    def charge_state(self):
+        return {"battery_level": round(self.level), "charge_limit_soc": self.limit,
+                "charging_state": "Charging" if self.charging else "Stopped"}
+
+    def charge_start(self):
+        if self.level >= self.limit:
+            return "complete"
+        self.charging = True
+        return ""
+
+    def charge_stop(self):
+        self.charging = False
+        return ""
+
+    def wake(self):
+        pass
+
+
+def live_loop(app, step=5):
+    """Simulér en tilsluttet bil; smart opladning bestemmer om den lader."""
+    car = app.car
+    session_wh, started = 6200.0, time.time() - 2040
     while True:
-        p = 11000 + random.uniform(-200, 200)
-        session_wh += p * 5 / 3600
-        app.vitals = {
-            "vehicle_connected": True, "contactor_closed": True,
+        p = 11000 + random.uniform(-200, 200) if car.charging else 0.0
+        session_wh += p * step / 3600
+        car.level = min(car.level + p * step / 3600 / 1000 * 0.9 / 75 * 100, 100)
+        v = {
+            "vehicle_connected": True, "contactor_closed": car.charging,
             "currentA_a": p / 3 / 230, "currentB_a": p / 3 / 230, "currentC_a": p / 3 / 230,
             "voltageA_v": 230, "voltageB_v": 230, "voltageC_v": 230,
-            "session_energy_wh": session_wh + 6200, "session_s": time.time() - started + 2040,
+            "session_energy_wh": session_wh, "session_s": time.time() - started,
         }
-        app.vitals_ts = time.time()
-        time.sleep(5)
+        app.vitals, app.vitals_ts = v, time.time()
+        app.after_vitals(v, int(time.time()))
+        time.sleep(step)

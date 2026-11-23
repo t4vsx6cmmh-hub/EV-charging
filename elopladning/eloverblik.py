@@ -4,11 +4,10 @@ Du laver selv et 'refresh token' på eloverblik.dk (log ind med MitID ->
 'Del data' / 'Datadeling' -> 'Opret token'). Det gælder i op til et år.
 Appen veksler det til et 'access token' (gyldigt 24 timer).
 """
-import json
 import time
-import urllib.request
 from datetime import datetime
 
+from .net import HTTPError, request_json
 from .timeutil import iso_duration_seconds, parse_iso_utc
 
 BASE = "https://api.eloverblik.dk/customerapi/api"
@@ -20,20 +19,21 @@ class Eloverblik:
         self._access = None
         self._access_ts = 0
 
-    def _req(self, method, path, token, body=None, timeout=60):
-        data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(BASE + path, data=data, method=method, headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        })
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode())
+    def _req(self, method, path, token, body=None, timeout=120):
+        # Eloverblik svarer ofte langsomt eller med 503 – derfor genforsøg
+        return request_json(BASE + path, method, headers={"Authorization": f"Bearer {token}"},
+                            body=body, timeout=timeout, retries=3, backoff=5)
 
     def access_token(self):
         if self._access and time.time() - self._access_ts < 20 * 3600:
             return self._access
-        self._access = self._req("GET", "/token", self.refresh_token)["result"]
+        try:
+            self._access = self._req("GET", "/token", self.refresh_token)["result"]
+        except HTTPError as e:
+            if e.status in (401, 403):
+                raise RuntimeError("Eloverblik afviste tokenet – opret et nyt på eloverblik.dk "
+                                   "og sæt det i config.json") from None
+            raise
         self._access_ts = time.time()
         return self._access
 

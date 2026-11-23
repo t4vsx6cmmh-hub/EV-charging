@@ -1,5 +1,6 @@
 """Beregning af kWh-pris pr. kvarter og fordeling af forbrug/omkostning
 mellem elbil og resten af husstanden."""
+import calendar
 import statistics
 from collections import OrderedDict
 
@@ -174,6 +175,20 @@ def summarize(meter_rows, ev_rows, prices, group="day", ev_logging_from=None,
         row["maaler_data"] = row.pop("maaler_intervaller") > 0
         out.append(row)
     return sorted(out, key=lambda r: r["periode"])
+
+
+def add_subscriptions(rows, group, monthly_kr):
+    """Læg faste abonnementer (kr/måned inkl. moms) på hver periode.
+    For dage fordeles månedsbeløbet ligeligt på månedens dage."""
+    for r in rows:
+        if group == "month":
+            sub = monthly_kr
+        else:
+            y, m = int(r["periode"][:4]), int(r["periode"][5:7])
+            sub = monthly_kr / calendar.monthrange(y, m)[1]
+        r["abonnement_kr"] = round(sub, 2)
+        r["total_inkl_abonnement_kr"] = round(r["total_kr"] + sub, 2)
+    return rows
 
 
 # ---------------------------------------------------------- ladesessioner ----

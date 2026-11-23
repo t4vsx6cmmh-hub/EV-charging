@@ -14,6 +14,7 @@
     --ev:#5b93f0; --house:#f0a04b; --good:#3cc47a; --warn:#ee6a4f; --chip:#232932; }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:20px 16px 48px}
 h1{font-size:22px;margin:0}
@@ -44,6 +45,18 @@ th{color:var(--muted);font-weight:500;font-size:12px}
 .note{font-size:12px;color:var(--muted);margin-top:8px}
 .errors{background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:none}
 .wide{margin-bottom:14px}
+a.btn{text-decoration:none;display:inline-block}
+.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.smartgrid{display:grid;gap:16px;grid-template-columns:1fr auto;align-items:start}
+@media (max-width:640px){.smartgrid{grid-template-columns:1fr}}
+.mid{font-size:20px;font-weight:650;margin:4px 0;font-variant-numeric:tabular-nums}
+.form{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.form input{font:inherit;font-size:14px;background:var(--chip);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;width:110px}
+.log{list-style:none;padding:0;margin:12px 0 0;font-size:12px;color:var(--muted);columns:2 260px}
+.log li{padding:1px 0}
+.legend{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--ev)}
 </style>
 </head>
 <body>
@@ -85,8 +98,33 @@ th{color:var(--muted);font-weight:500;font-size:12px}
   </div>
 </section>
 
+<section class="card wide" id="smartCard">
+  <div class="toolbar">
+    <h2 style="margin:0">Smart opladning</h2>
+    <div class="seg" id="modeSeg" role="group" aria-label="Tilstand">
+      <button data-m="off">Fra</button>
+      <button data-m="smart">Smart</button>
+      <button data-m="now">Lad nu</button>
+    </div>
+  </div>
+  <div class="smartgrid">
+    <div>
+      <div class="label" id="smartLabel">Plan</div>
+      <div class="mid" id="smartHead">–</div>
+      <div class="sub" id="smartSub"></div>
+      <div class="sub" id="smartStatus" style="margin-top:6px"></div>
+    </div>
+    <form class="form" id="smartForm">
+      <label>Klar kl.<input type="time" id="smartReady" required></label>
+      <label id="kwhLabel">Energi i alt (kWh)<input type="number" id="smartKwh" min="1" max="150" step="1" required></label>
+      <button class="btn" type="submit">Gem</button>
+    </form>
+  </div>
+  <ul class="log" id="smartLog"></ul>
+</section>
+
 <section class="card wide">
-  <div class="toolbar"><h2 style="margin:0">Elpris i dag og i morgen</h2><span class="sub">kr/kWh pr. kvarter</span></div>
+  <div class="toolbar"><h2 style="margin:0">Elpris i dag og i morgen</h2><span class="sub"><span class="legend" id="planLegend" hidden><i></i>smart-plan ·</span> kr/kWh pr. kvarter</span></div>
   <div class="chart"><canvas id="priceChart"></canvas></div>
 </section>
 
@@ -95,9 +133,12 @@ th{color:var(--muted);font-weight:500;font-size:12px}
 <section class="card wide">
   <div class="toolbar">
     <h2 style="margin:0">Omkostning: elbil og hus</h2>
-    <div class="seg" id="groupSeg">
-      <button data-g="day" class="on">Pr. dag</button>
-      <button data-g="month">Pr. måned</button>
+    <div class="right">
+      <div class="seg" id="groupSeg">
+        <button data-g="day" class="on">Pr. dag</button>
+        <button data-g="month">Pr. måned</button>
+      </div>
+      <a class="btn" id="exportPeriods" href="/api/export.csv?type=perioder&group=day&antal=31" download>Eksportér CSV</a>
     </div>
   </div>
   <div class="chart"><canvas id="costChart"></canvas></div>
@@ -106,12 +147,15 @@ th{color:var(--muted);font-weight:500;font-size:12px}
 </section>
 
 <section class="card wide">
-  <h2>Ladesessioner</h2>
+  <div class="toolbar"><h2 style="margin:0">Ladesessioner</h2>
+    <a class="btn" href="/api/export.csv?type=sessioner&dage=365" download>Eksportér CSV (1 år)</a></div>
   <div class="scroll"><table id="sessTable"></table></div>
   <div class="note">“Billigst mulige” er prisen, hvis den samme mængde strøm var ladet i de billigste kvarterer inden for 14 timer efter tilslutning.</div>
 </section>
 
-<div class="toolbar"><span class="sub" id="footer"></span><button class="btn" id="syncBtn">Hent nye data</button></div>
+<div class="toolbar"><span class="sub" id="footer"></span>
+  <div class="right"><button class="btn" id="notifyBtn" hidden>Send testnotifikation</button>
+  <button class="btn" id="syncBtn">Hent nye data</button></div></div>
 </main>
 
 <script src="vendor/chart.umd.js"></script>
@@ -123,7 +167,16 @@ const fmtTime = t => new Date(t*1000).toLocaleTimeString("da-DK",{hour:"2-digit"
 const fmtDay = t => new Date(t*1000).toLocaleDateString("da-DK",{weekday:"short",day:"numeric",month:"short"});
 let group = "day", priceChart, costChart;
 
-async function j(url, opt){ const r = await fetch(url, opt); return r.json(); }
+async function j(url, opt){
+  const r = await fetch(url, opt);
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.fejl || ("HTTP " + r.status));
+  return d;
+}
+const post = (url, body) => j(url, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body || {})});
+const safe = f => (...a) => f(...a).catch(e => console.warn(e));
+const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtRange = ([a,b]) => `${fmtTime(a)}–${fmtTime(b)}`;
 
 function chartDefaults(){
   Chart.defaults.color = css("--muted");
@@ -156,6 +209,9 @@ async function loadStatus(){
   chips.push(`<span class="chip ${s.fejl.wall_connector ? "bad":"ok"}">Wall Connector</span>`);
   chips.push(`<span class="chip ${s.fejl.eloverblik || !s.konfigureret.eloverblik ? "bad":"ok"}">Eloverblik</span>`);
   chips.push(`<span class="chip ${s.fejl.spotpriser ? "bad":"ok"}">Spotpriser</span>`);
+  if(s.konfigureret.tesla) chips.push(`<span class="chip ${s.smart_fejl || s.fejl.tesla ? "bad":"ok"}">Tesla</span>`);
+  if(s.konfigureret.notifikationer) chips.push(`<span class="chip ok">Notifikationer</span>`);
+  $("notifyBtn").hidden = !s.konfigureret.notifikationer;
   $("chips").innerHTML = chips.join("");
 
   const errs = Object.entries(s.fejl);
@@ -163,7 +219,7 @@ async function loadStatus(){
   if(!s.tariffer.length) warns.push("Ingen tariffer endnu – priserne er uden nettarif og afgifter, indtil Eloverblik er hentet (eller manual_tariffs er udfyldt).");
   if(!s.konfigureret.tillaeg_kr && !s.demo) warns.push("Andel Energis tillæg er sat til 0 – udfyld supplier_addon_kr_per_kwh i config.json ud fra din regning.");
   $("errors").style.display = errs.length || warns.length ? "block" : "none";
-  $("errors").innerHTML = errs.map(([k,v]) => `<div><b>${k}:</b> ${v}</div>`).join("") + warns.map(w => `<div>${w}</div>`).join("");
+  $("errors").innerHTML = errs.map(([k,v]) => `<div><b>${esc(k)}:</b> ${esc(v)}</div>`).join("") + warns.map(w => `<div>${w}</div>`).join("");
 
   const ls = s.sidste_sync;
   $("footer").textContent = Object.keys(ls).length ? "Senest hentet: " + Object.entries(ls).map(([k,t]) => `${k.replace("_"," ")} ${fmtTime(t)}`).join(" · ") : "";
@@ -183,8 +239,10 @@ async function loadPrices(){
   const vals = pts.map(p => p.total);
   const sorted = [...vals].sort((a,b)=>a-b);
   const lo = sorted[Math.floor(sorted.length*0.33)], hi = sorted[Math.floor(sorted.length*0.66)];
+  const plan = new Set(d.plan || []);
+  $("planLegend").hidden = !plan.size;
   const colors = vals.map((v,i) => {
-    const c = v <= lo ? css("--good") : v >= hi ? css("--warn") : css("--house");
+    const c = plan.has(pts[i].t) ? css("--ev") : v <= lo ? css("--good") : v >= hi ? css("--warn") : css("--house");
     return i < nowIdx ? c + "55" : c;
   });
   const labels = pts.map(p => { const dt = new Date(p.t*1000); return dt.getMinutes() === 0 && dt.getHours() === 0 ? fmtDay(p.t) : fmtTime(p.t); });
@@ -196,7 +254,7 @@ async function loadPrices(){
   priceChart = new Chart($("priceChart"), {type:"bar", data, plugins:[nowLine], options:{
     maintainAspectRatio:false, animation:false, plugins:{legend:{display:false},
       tooltip:{callbacks:{title:i => fmtDay(pts[i[0].dataIndex].t)+" "+fmtTime(pts[i[0].dataIndex].t),
-        label:i => { const p = pts[i.dataIndex]; return [`I alt: ${kr(p.total)} kr/kWh`, `Spot: ${kr(p.spot,3)}`, `Tariffer: ${kr(p.tariffer,3)}`]; }}}},
+        label:i => { const p = pts[i.dataIndex]; return [`I alt: ${kr(p.total)} kr/kWh`, `Spot: ${kr(p.spot,3)}`, `Tariffer: ${kr(p.tariffer,3)}`].concat(plan.has(p.t) ? ["Smart-plan: lader her"] : []); }}}},
     scales:{x:{grid:{display:false}, ticks:{autoSkip:false, maxRotation:0,
       callback:(v,i) => { const dt = new Date(pts[i].t*1000); return dt.getMinutes()===0 && dt.getHours()%6===0 ? labels[i] : ""; }}},
       y:{beginAtZero:true, ticks:{callback:v => kr(v)}}}}});
@@ -217,12 +275,14 @@ async function loadSummary(){
       tooltip:{callbacks:{label:i => `${i.dataset.label}: ${kr(i.raw)} kr`}}},
     scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, ticks:{callback:v=>kr(v,0)+" kr"}}}}});
 
-  $("costTable").innerHTML = `<tr><th>${group==="day"?"Dag":"Måned"}</th><th class="ev">Elbil kWh</th><th class="ev">Elbil kr</th><th class="ev">kr/kWh</th><th class="house">Hus kWh</th><th class="house">Hus kr</th><th>I alt kr</th></tr>` +
+  const subs = rows.some(r => r.abonnement_kr > 0);
+  $("costTable").innerHTML = `<tr><th>${group==="day"?"Dag":"Måned"}</th><th class="ev">Elbil kWh</th><th class="ev">Elbil kr</th><th class="ev">kr/kWh</th><th class="house">Hus kWh</th><th class="house">Hus kr</th><th>I alt kr</th>${subs?"<th>Abonnementer</th><th>I alt inkl. abon.</th>":""}</tr>` +
     [...rows].reverse().map(r => `<tr><td>${name(r)}</td>
       <td>${r.elbil_estimeret?"≈ ":""}${kr(r.elbil_kwh,1)}</td><td>${r.elbil_estimeret?"≈ ":""}${kr(r.elbil_kr)}</td>
       <td>${r.elbil_kwh>0.1?kr(r.elbil_kr/r.elbil_kwh):"–"}</td>
       <td>${r.maaler_data?kr(r.hus_kwh,1):'<span class="sub">afventer</span>'}</td>
-      <td>${r.maaler_data?kr(r.hus_kr):'<span class="sub">afventer</span>'}</td><td>${kr(r.total_kr)}</td></tr>`).join("");
+      <td>${r.maaler_data?kr(r.hus_kr):'<span class="sub">afventer</span>'}</td><td>${kr(r.total_kr)}</td>
+      ${subs?`<td>${kr(r.abonnement_kr)}</td><td>${kr(r.total_inkl_abonnement_kr)}</td>`:""}</tr>`).join("");
 
   // Nøgletal for indeværende måned
   const m = await j("/api/summary?group=month&antal=2");
@@ -237,7 +297,8 @@ async function loadSummary(){
       <div class="sub">${kr(cur.hus_kwh,0)} kWh · gns. ${kr(houseAvg)} kr/kWh</div>
       ${prev?`<div class="sub">Sidste måned: ${kr(prev.hus_kr,0)} kr</div>`:""}</div>
     <div class="card"><div class="label">Elbilens andel</div><div class="big">${cur.total_kr?Math.round(100*cur.elbil_kr/cur.total_kr):0} %</div>
-      <div class="sub">af månedens elregning (ekskl. abonnementer)</div></div>`;
+      <div class="sub">af månedens forbrug (ekskl. abonnementer)</div>
+      ${cur.abonnement_kr?`<div class="sub">Hele regningen inkl. abonnementer: ${kr(cur.total_inkl_abonnement_kr,0)} kr</div>`:""}</div>`;
 }
 
 async function loadSessions(){
@@ -251,22 +312,77 @@ async function loadSessions(){
       `<tr><td colspan="7" class="sub" style="text-align:left">Ingen sessioner registreret endnu.</td></tr>`);
 }
 
+async function loadSmart(){
+  const s = await j("/api/smart");
+  const st = s.indstillinger, p = s.plan;
+  [...$("modeSeg").children].forEach(b => b.classList.toggle("on", b.dataset.m === st.mode));
+  if(document.activeElement !== $("smartReady")) $("smartReady").value = st.klar_kl;
+  if(document.activeElement !== $("smartKwh")) $("smartKwh").value = Math.round(st.kwh);
+  $("kwhLabel").hidden = s.kilde === "soc";
+
+  let label = "Plan", head = "–", sub = [], status = [];
+  if(st.mode === "off"){
+    label = "Slået fra"; head = "Appen styrer ikke opladningen";
+    if(p && p.perioder.length) sub.push(`Billigst: ${p.perioder.map(fmtRange).join(", ")} · ca. ${kr(p.kr)} kr`);
+  } else if(st.mode === "now"){
+    label = "Lad nu"; head = s.lader ? "Lader med fuld kraft" : (s.tilsluttet ? "Starter opladning …" : "Sæt bilen til");
+  } else if(!p || p.faerdig){
+    head = s.tilsluttet ? "Færdig – intet mere at lade" : "Klar";
+  } else {
+    label = s.forhaandsvisning ? "Når bilen sættes til nu" : (s.oensket ? "Lader nu efter planen" : "Venter på billig strøm");
+    head = p.perioder.map(fmtRange).join(", ");
+    sub.push(`${kr(p.kwh,1)} kWh · ca. ${kr(p.kr)} kr · klar kl. ${fmtTime(p.klar)}`);
+    if(p.kr_hvis_nu != null && p.kr != null && p.kr_hvis_nu - p.kr >= 0.5)
+      sub.push(`<span class="good">sparer ca. ${kr(p.kr_hvis_nu - p.kr)} kr</span> ift. at lade med det samme`);
+    if(p.estimeret) sub.push("≈ morgendagens priser er skønnet (offentliggøres ca. kl. 13)");
+    if(p.naar_ikke) sub.push(`<span class="warn">Der er ikke tid nok til at nå det hele inden kl. ${fmtTime(p.klar)}</span>`);
+  }
+  if(s.soc) status.push(`Batteri ${Math.round(s.soc.niveau)} % → ${Math.round(s.soc.graense)} % (bilens ladegrænse)`);
+  if(st.mode !== "off") status.push(s.styrer_bilen
+    ? "Appen starter og stopper opladningen selv."
+    : "Kun anbefaling – appen kan ikke styre bilen uden Tesla Fleet API (se README).");
+  if(s.fejl) status.push(`<span class="warn">${esc(s.fejl)}</span>`);
+  $("smartLabel").textContent = label;
+  $("smartHead").textContent = head;
+  $("smartSub").innerHTML = sub.join("<br>");
+  $("smartStatus").innerHTML = status.join("<br>");
+  $("smartLog").innerHTML = s.log.slice(0,6).map(l => `<li>${fmtTime(l.t)} ${esc(l.tekst)}</li>`).join("");
+}
+
+async function saveSmart(body){
+  try { await post("/api/smart", body); } catch(e){ alert(e.message); }
+  loadSmart(); loadPrices();
+}
+$("modeSeg").addEventListener("click", e => { if(e.target.dataset.m) saveSmart({mode: e.target.dataset.m}); });
+$("smartForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const body = {klar_kl: $("smartReady").value};
+  if(!$("kwhLabel").hidden) body.kwh = Number($("smartKwh").value);
+  saveSmart(body);
+});
+$("notifyBtn").addEventListener("click", async () => {
+  try { await post("/api/notify-test"); alert("Testbesked sendt."); } catch(e){ alert(e.message); }
+});
+
 $("groupSeg").addEventListener("click", e => {
   if(!e.target.dataset.g) return;
   group = e.target.dataset.g;
   [...$("groupSeg").children].forEach(b => b.classList.toggle("on", b === e.target));
+  $("exportPeriods").href = `/api/export.csv?type=perioder&group=${group}&antal=${group==="day"?31:24}`;
   loadSummary();
 });
-$("hours").addEventListener("change", loadPrices);
+$("hours").addEventListener("change", safe(loadPrices));
 $("syncBtn").addEventListener("click", async () => {
-  $("syncBtn").disabled = true; await j("/api/sync",{method:"POST"});
+  $("syncBtn").disabled = true; await post("/api/sync").catch(e => alert(e.message));
   setTimeout(() => { $("syncBtn").disabled = false; refreshAll(); }, 4000);
 });
 
-function refreshAll(){ loadStatus(); loadPrices(); loadSummary(); loadSessions(); }
+[loadStatus, loadPrices, loadSummary, loadSessions, loadSmart] =
+  [loadStatus, loadPrices, loadSummary, loadSessions, loadSmart].map(safe);
+function refreshAll(){ loadStatus(); loadSmart(); loadPrices(); loadSummary(); loadSessions(); }
 chartDefaults();
 refreshAll();
-setInterval(loadStatus, 15000);
+setInterval(() => { loadStatus(); loadSmart(); }, 15000);
 setInterval(() => { loadPrices(); loadSummary(); loadSessions(); }, 5*60000);
 </script>
 </body>

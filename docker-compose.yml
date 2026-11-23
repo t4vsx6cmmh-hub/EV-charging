@@ -1,0 +1,10 @@
+# Start:  mkdir data && cp config.example.json data/config.json  (udfyld den)
+#         docker compose up -d
+services:
+  elopladning:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data   # config.json og databasen ligger her
