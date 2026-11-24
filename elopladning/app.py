@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import calc, export, prices, smart, tesla, wallconnector
+from . import autopilot, calc, export, prices, smart, solar, tesla, wallconnector
 from .config import ConfigError, load_config
 from .db import DB
 from .eloverblik import Eloverblik
@@ -64,7 +64,10 @@ class App:
             except Exception as e:
                 self._err("tesla", e)
         self.notifier = make_notifier(cfg, demo)
-        self.smart = smart.SmartCharger(cfg, self.db, self.car, self.price_model)
+        self.smart = smart.SmartCharger(
+            cfg, self.db, self.car, self.charge_prices,
+            learner=lambda now: autopilot.learn(
+                self.db.plug_events(now - autopilot.WEEKS * 7 * 86400), now))
         self.events = Events(self, self.notifier)
 
     # ------------------------------------------------------------ helpers --
@@ -91,6 +94,26 @@ class App:
         return calc.PriceModel(self.db.spot(t0 - 3600, t1 + 3600), self.tariffs(),
                                float(self.cfg["supplier_addon_kr_per_kwh"]),
                                float(self.cfg["vat"]))
+
+    def solar_forecast(self, t0, t1):
+        return solar.SolarForecast(self.db.solar(t0 - 3600, t1 + 3600))
+
+    def charge_prices(self, t0, t1):
+        """Pris for at lade bilen pr. kvarter – med solceller er solens overskud billigere."""
+        pm = self.price_model(t0, t1)
+        if not solar.enabled(self.cfg):
+            return pm
+        return solar.ChargePrices(pm, self.solar_forecast(t0, t1), float(self.cfg["charge_kw"]),
+                                  float(self.cfg["solar_base_load_kw"]),
+                                  float(self.cfg["solar_sell_fee_kr_per_kwh"]))
+
+    def ev_prices(self, t0, t1):
+        """Pris for elbilens faktiske forbrug – med solceller tæller solstrøm som salgsværdi."""
+        pm = self.price_model(t0, t1)
+        if not solar.enabled(self.cfg):
+            return pm
+        return solar.EvPrices(pm, self.db.meter(t0, t1), self.db.ev_intervals(t0, t1),
+                              float(self.cfg["solar_sell_fee_kr_per_kwh"]))
 
     def fresh_vitals(self):
         return self.vitals if (self.vitals and time.time() - self.vitals_ts < 300) else None
@@ -162,8 +185,19 @@ class App:
         except Exception as e:
             self._err("eloverblik", e)
 
+    def sync_solar(self):
+        if not solar.enabled(self.cfg):
+            return
+        try:
+            self.db.upsert_solar(solar.fetch_forecast(self.cfg))
+            self.last_sync["solprognose"] = int(time.time())
+            self._err("solprognose")
+        except Exception as e:
+            self._err("solprognose", e)
+
     def sync_all(self):
         self.sync_spot()
+        self.sync_solar()
         self.sync_eloverblik()
 
     def _poll_once(self):
@@ -204,6 +238,7 @@ class App:
         return {
             "wall_connector": wc,
             "hus_typisk_kw": house_kw,
+            "sol": self.solar_status(now),
             "pris_nu": pm.parts(now),
             "tariffer": [{"navn": t["name"], "antal_priser": len(t["prices"])}
                          for t in self.tariffs()],
@@ -221,21 +256,40 @@ class App:
             },
         }
 
+    def solar_status(self, now):
+        if not solar.enabled(self.cfg):
+            return {"konfigureret": False}
+        today = datetime.now(DK).date()
+        out = {"konfigureret": True, "kwp": float(self.cfg["solar_kwp"])}
+        fc = self.solar_forecast(local_midnight(today), local_midnight(today + timedelta(days=2)))
+        out["kw_nu"] = fc.kw_at(now)
+        for key, d in (("i_dag_kwh", today), ("i_morgen_kwh", today + timedelta(days=1))):
+            vals = [fc.kw_at(t) for t in range(local_midnight(d), local_midnight(d + timedelta(days=1)), 900)]
+            out[key] = round(sum(v for v in vals if v) / 4, 1) if any(v is not None for v in vals) else None
+        return out
+
     def api_prices(self, hours=4.0, days_back=0):
         now = int(time.time())
         today = datetime.now(DK).date()
         t0, t1 = local_midnight(today - timedelta(days=days_back)), local_midnight(today + timedelta(days=2))
         pm = self.price_model(t0, t1)
+        cp = self.charge_prices(t0, t1)
+        use_solar = solar.enabled(self.cfg)
         pts = []
         for t in range(t0, t1, 900):
             p = pm.parts(t)
             if p:
-                pts.append({"t": t, **{k: round(v, 4) for k, v in p.items()}})
+                pt = {"t": t, **{k: round(v, 4) for k, v in p.items()}}
+                if use_solar:
+                    kw = cp.fc.kw_at(t)
+                    pt["sol_kw"] = None if kw is None else round(kw, 2)
+                    pt["lade_pris"] = round(cp.price(t), 4)
+                pts.append(pt)
         st = self.smart.state(now)
         plan = ([s["t"] for s in st["plan"]["slots"]]
                 if st["plan"] and st["indstillinger"]["mode"] == "smart" else [])
         return {"nu": now, "priser": pts, "plan": plan, "i_dag": local_midnight(today),
-                "billigste_blok": calc.cheapest_block(pm, now, t1, hours)}
+                "billigste_blok": calc.cheapest_block(cp, now, t1, hours)}
 
     def api_insights(self, month=None):
         """Nøgletal for en måned (YYYY-MM, standard: denne) og måneden før."""
@@ -253,7 +307,7 @@ class App:
         def one(y, m):
             t0 = local_midnight(date(y, m, 1))
             t1 = local_midnight(date(y + (m == 12), m % 12 + 1, 1))
-            pm = self.price_model(t0, t1)
+            pm = self.ev_prices(t0, t1)
             r = calc.insights(self.db.ev_intervals(t0, t1), pm, t0, t1, now, self.cfg)
             r["maaned"] = f"{y:04d}-{m:02d}"
             return r
@@ -274,7 +328,7 @@ class App:
         else:
             start = today - timedelta(days=count - 1)
         t0, t1 = local_midnight(start), local_midnight(today + timedelta(days=1))
-        pm = self.price_model(t0, t1)
+        pm = self.ev_prices(t0, t1)
         rows = calc.summarize(self.db.meter(t0, t1), self.db.ev_intervals(t0, t1), pm,
                               group, ev_logging_from=self.db.first_ev_ts(),
                               detect_kw=self.cfg["ev_detect_kw"])
@@ -283,7 +337,7 @@ class App:
     def api_sessions(self, days=60):
         now = int(time.time())
         t0 = now - days * 86400
-        pm = self.price_model(t0, now + 86400)
+        pm = self.ev_prices(t0, now + 86400)
         return list(reversed(calc.sessions(self.db.ev_intervals(t0, now + 900), pm)))
 
     def api_export(self, q):
@@ -467,6 +521,8 @@ def main():
         cfg["port"] = args.port
     if args.demo:
         cfg["db_path"] = os.path.join(ROOT, "demo.db")
+        if not cfg["solar_kwp"]:
+            cfg["solar_kwp"] = 6.0  # demoen viser et 6 kWp-anlæg
     elif not os.path.exists(args.config):
         raise SystemExit("Mangler config.json – kopier config.example.json og udfyld den.")
 

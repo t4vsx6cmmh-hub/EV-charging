@@ -10,10 +10,11 @@ Tilstande:  off   – appen rører ikke bilen
 import math
 import re
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 
+from . import autopilot
 from .tesla import VehicleAsleep
-from .timeutil import INTERVAL, local_dt
+from .timeutil import DK, INTERVAL, local_dt
 from .wallconnector import power_w
 
 MODES = ("off", "smart", "now")
@@ -95,8 +96,10 @@ def make_plan(pm, now, deadline, kwh, charge_kw):
 
 
 class SmartCharger:
-    def __init__(self, cfg, store, car, price_model, clock=time.time):
+    def __init__(self, cfg, store, car, price_model, clock=time.time, learner=None):
         self.cfg = cfg
+        self.learner = learner      # now -> autopilot-model (eller None)
+        self._model, self._model_ts = None, 0
         self.store = store
         self.car = car
         self.price_model = price_model
@@ -123,9 +126,50 @@ class SmartCharger:
     # ---------------------------------------------------------- indstillinger --
     def settings(self):
         s = {"mode": "off", "klar_kl": self.cfg["smart_default_ready"],
-             "kwh": float(self.cfg["smart_default_kwh"]), "maal_pct": None}
+             "kwh": float(self.cfg["smart_default_kwh"]), "maal_pct": None, "autopilot": True}
         s.update(self.store.get_kv("smart_settings", {}) or {})
         return s
+
+    def model(self, now):
+        """Autopilotens model over afgangstider (genberegnes højst én gang i timen)."""
+        if not self.learner:
+            return None
+        if self._model is None or now - self._model_ts > 3600:
+            self._model, self._model_ts = self.learner(now), now
+        return self._model
+
+    def effective(self, now):
+        """De indstillinger, der gælder for næste afgang: engangsændring >
+        autopilot > manuel "klar kl."."""
+        s = self.settings()
+        eff = dict(s)
+        model = self.model(now) if s.get("autopilot") else None
+        if model:
+            t, hhmm, info, day = autopilot.next_departure(model, now, s["klar_kl"])
+            eff.update(klar_kl=hhmm, kilde="autopilot", dato=day.isoformat(),
+                       forklaring=autopilot.explain(info, day, autopilot.local_dt(now).date()))
+            if model.get("kwh") and info is not None:
+                eff["kwh"] = eff["kwh_laert"] = float(model["kwh"])
+        else:
+            t = next_deadline(now, s["klar_kl"])
+            eff.update(kilde="manuel", dato=autopilot.local_dt(t).date().isoformat(), forklaring=None)
+        ov = self.store.get_kv("smart_override")
+        if ov and ov.get("dato") == eff["dato"]:
+            for k in ("klar_kl", "maal_pct", "kwh"):
+                if ov.get(k) is not None:
+                    eff[k] = ov[k]
+            if ov.get("klar_kl"):
+                day = datetime.strptime(ov["dato"], "%Y-%m-%d").date()
+                h, m = parse_hhmm(ov["klar_kl"])
+                t = int(datetime(day.year, day.month, day.day, h, m, tzinfo=DK).timestamp())
+                if t <= now:
+                    t = next_deadline(now, ov["klar_kl"])
+            eff["kilde"] = "engang"
+            eff["engang"] = ov
+        elif ov and ov.get("dato", "") < autopilot.local_dt(now).date().isoformat():
+            self.store.set_kv("smart_override", None)  # udløbet
+        eff["deadline"] = t
+        return eff
 
     def set_settings(self, data):
         s = self.settings()
@@ -155,8 +199,37 @@ class SmartCharger:
                 if not 20 <= v <= 100:
                     raise ValueError("Mål i % skal ligge mellem 20 og 100")
             s["maal_pct"] = v
+        if "autopilot" in data:
+            s["autopilot"] = bool(data["autopilot"])
+        if "engang" in data:
+            self._set_override(data["engang"])
         self.store.set_kv("smart_settings", s)
         return s
+
+    def _set_override(self, ov):
+        """Engangsændring for næste afgang, fx {"maal_pct": 100} til en lang tur."""
+        if not ov:
+            self.store.set_kv("smart_override", None)
+            return
+        if not isinstance(ov, dict):
+            raise ValueError("engang skal være et objekt")
+        clean = {}
+        if ov.get("klar_kl"):
+            clean["klar_kl"] = "%02d:%02d" % parse_hhmm(ov["klar_kl"])
+        if ov.get("maal_pct") is not None:
+            v = float(ov["maal_pct"])
+            if not 20 <= v <= 100:
+                raise ValueError("Mål i % skal ligge mellem 20 og 100")
+            clean["maal_pct"] = v
+        if ov.get("kwh") is not None:
+            v = float(ov["kwh"])
+            if not 0 < v <= 150:
+                raise ValueError("kWh skal ligge mellem 1 og 150")
+            clean["kwh"] = v
+        now = int(self.clock())
+        self.store.set_kv("smart_override", None)  # find næste afgang uden den gamle ændring
+        clean["dato"] = self.effective(now)["dato"]
+        self.store.set_kv("smart_override", clean)
 
     def _log(self, now, text):
         self.log.insert(0, {"t": int(now), "tekst": text})
@@ -171,19 +244,21 @@ class SmartCharger:
         if not v.get("vehicle_connected"):
             if self.plugged:
                 self._log(now, "Bilen er koblet fra")
+                self._record(now, "out", self.session_kwh)
             self._reset()
             return
         if not self.plugged:
             self.plugged, self.plug_ts = True, now
             self._log(now, "Bilen er sat til")
-        s = self.settings()
+            self._record(now, "in", None)
+        s = self.effective(now)
         session_kwh = float(v.get("session_energy_wh") or 0) / 1000
         self.session_kwh = session_kwh
         self.charging = bool(v.get("contactor_closed")) and power_w(v) > 100
         if self.car and now - self.soc_try_ts >= SOC_REFRESH:
             self._refresh_soc(now, session_kwh)
         self.remaining, self.source = self._remaining(s, session_kwh)
-        deadline = next_deadline(now, s["klar_kl"])
+        deadline = s["deadline"]
         pm = self.price_model(now - 86400, deadline)
         self.plan = make_plan(pm, now, deadline, self.remaining, float(self.cfg["charge_kw"]))
 
@@ -197,6 +272,12 @@ class SmartCharger:
         self.desired = want
         if want is not None and self.car:
             self._enforce(want, now)
+
+    def _record(self, now, kind, kwh):
+        """Gem tilslutning/afgang – autopiloten lærer af dem."""
+        if hasattr(self.store, "add_plug_event"):
+            self.store.add_plug_event(now, kind, kwh)
+            self._model = None
 
     def _refresh_soc(self, now, session_kwh):
         self.soc_try_ts = now
@@ -223,7 +304,7 @@ class SmartCharger:
 
     def target_pct(self, s=None):
         """Mål i %: eget mål fra appen, dog højst bilens ladegrænse."""
-        s = s or self.settings()
+        s = s or self.effective(int(self.clock()))
         limit = self.soc["graense"] if self.soc else 100.0
         return min(float(s["maal_pct"]), limit) if s.get("maal_pct") else limit
 
@@ -264,16 +345,20 @@ class SmartCharger:
     # ---------------------------------------------------------------- API --
     def state(self, now=None):
         now = int(now if now is not None else self.clock())
-        s = self.settings()
+        s = self.effective(now)
         plan, preview = self.plan, False
         if not self.plugged:
             # Forhåndsvisning: hvad sker der, hvis bilen sættes til nu?
-            deadline = next_deadline(now, s["klar_kl"])
+            deadline = s["deadline"]
             plan = make_plan(self.price_model(now - 86400, deadline), now, deadline,
                              float(s["kwh"]), float(self.cfg["charge_kw"]))
             preview = True
+        model = self.model(now) if s.get("autopilot") else None
         return {
-            "indstillinger": s,
+            "indstillinger": self.settings(),
+            "naeste": {k: s.get(k) for k in ("deadline", "klar_kl", "kilde", "forklaring", "dato",
+                                              "maal_pct", "kwh", "engang", "kwh_laert")},
+            "autopilot": model,
             "tilsluttet": self.plugged,
             "lader": self.charging,
             "plan": plan,

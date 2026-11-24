@@ -211,7 +211,7 @@ class ControllerTest(unittest.TestCase):
         sc, store = self.make()
         sc.set_settings({"mode": "now", "klar_kl": "6:05", "kwh": "20"})
         self.assertEqual(store["smart_settings"], {"mode": "now", "klar_kl": "06:05", "kwh": 20.0,
-                                                   "maal_pct": None})
+                                                   "maal_pct": None, "autopilot": True})
         for bad in ({"mode": "turbo"}, {"kwh": 0}, {"kwh": "x"}, {"klar_kl": "99:00"},
                     {"maal_pct": 10}, {"maal_pct": "fuld"}):
             with self.assertRaises(ValueError):

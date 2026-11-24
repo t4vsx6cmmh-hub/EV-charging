@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS spot (
     seconds INTEGER NOT NULL,
     dkk_per_mwh REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS solar (
+    start INTEGER PRIMARY KEY,       -- start på time (unix sek)
+    seconds INTEGER NOT NULL,
+    kw REAL NOT NULL                 -- forventet produktion
+);
+CREATE TABLE IF NOT EXISTS plug_event (
+    ts INTEGER PRIMARY KEY,          -- unix-tid
+    kind TEXT NOT NULL,              -- 'in' (sat til) eller 'out' (taget ud)
+    kwh REAL                         -- ladet i sessionen (ved 'out')
+);
 CREATE TABLE IF NOT EXISTS kv (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -93,6 +103,25 @@ class DB:
     def ev_intervals(self, t0, t1):
         return self.query("SELECT start, kwh FROM ev_interval WHERE start>=? AND start<? "
                           "ORDER BY start", (t0, t1))
+
+    # ---- Solprognose ----
+    def upsert_solar(self, rows):
+        self.executemany("INSERT OR REPLACE INTO solar(start, seconds, kw) VALUES (?, ?, ?)", rows)
+
+    def solar(self, t0, t1):
+        return self.query("SELECT start, seconds, kw FROM solar WHERE start>=? AND start<? "
+                          "ORDER BY start", (t0, t1))
+
+    def clear_solar(self):
+        self.execute("DELETE FROM solar")
+
+    # ---- Tilslutninger (autopilot) ----
+    def add_plug_event(self, ts, kind, kwh=None):
+        self.execute("INSERT OR REPLACE INTO plug_event(ts, kind, kwh) VALUES (?, ?, ?)",
+                     (int(ts), kind, kwh))
+
+    def plug_events(self, t0):
+        return self.query("SELECT ts, kind, kwh FROM plug_event WHERE ts>=? ORDER BY ts", (t0,))
 
     # ---- Måler (Eloverblik) ----
     def upsert_meter(self, rows):

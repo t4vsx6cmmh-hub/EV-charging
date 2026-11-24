@@ -29,6 +29,15 @@
   "smart_default_ready": "07:00",
   "smart_default_kwh": 30,
 
+  "solar_kwp": 0.0,
+  "solar_orientation": "syd",
+  "solar_tilt": 35,
+  "solar_lat": null,
+  "solar_lon": null,
+  "solar_efficiency": 0.85,
+  "solar_base_load_kw": 0.4,
+  "solar_sell_fee_kr_per_kwh": 0.02,
+
   "consumption_kwh_per_100km": 18.0,
   "petrol_l_per_100km": 6.0,
   "petrol_price_kr_per_l": 13.5,

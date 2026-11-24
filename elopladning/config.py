@@ -33,6 +33,15 @@ DEFAULTS = {
     "charge_efficiency": 0.9,
     "smart_default_ready": "07:00",
     "smart_default_kwh": 30,
+    # Solceller (0 kWp = ingen)
+    "solar_kwp": 0.0,
+    "solar_orientation": "syd",
+    "solar_tilt": 35,
+    "solar_lat": None,
+    "solar_lon": None,
+    "solar_efficiency": 0.85,
+    "solar_base_load_kw": 0.4,
+    "solar_sell_fee_kr_per_kwh": 0.02,
     # Sammenligning med benzinbil
     "consumption_kwh_per_100km": 18.0,
     "petrol_l_per_100km": 6.0,
@@ -121,6 +130,14 @@ def validate(cfg):
     num("charge_efficiency", 0.5, 1)
     num("smart_default_kwh", 1, 150)
     num("consumption_kwh_per_100km", 5, 60)
+    num("solar_kwp", 0, 100)
+    num("solar_tilt", 0, 90)
+    num("solar_lat", 54, 58, optional=True)
+    num("solar_lon", 7, 16, optional=True)
+    num("solar_efficiency", 0.5, 1)
+    num("solar_base_load_kw", 0, 10)
+    num("solar_sell_fee_kr_per_kwh", -1, 2)
+    text("solar_orientation", choices=("syd", "sydoest", "sydvest", "oest", "vest", "oest-vest"))
     num("petrol_l_per_100km", 1, 30)
     num("petrol_price_kr_per_l", 1, 50)
     num("notify_block_hours", 1, 12)

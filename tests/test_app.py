@@ -218,7 +218,7 @@ class AppTest(unittest.TestCase):
         self.assertEqual(code, 200, raw)
         st = json.loads(raw)
         self.assertEqual(st["indstillinger"], {"mode": "now", "klar_kl": "06:30", "kwh": 20.0,
-                                                "maal_pct": None})
+                                                "maal_pct": None, "autopilot": True})
         app.car.charging = False
         v = {"vehicle_connected": True, "contactor_closed": False, "session_energy_wh": 0}
         app.after_vitals(v, int(time.time()))

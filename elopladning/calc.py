@@ -106,6 +106,8 @@ def summarize(meter_rows, ev_rows, prices, group="day", ev_logging_from=None,
     """Returnerer liste af perioder med kWh og kr for elbil og husstand."""
     ev = {r["start"]: r["kwh"] for r in ev_rows}
     groups = OrderedDict()
+    grid = getattr(prices, "grid", prices)          # købspris fra nettet (huset)
+    solar_mode = hasattr(prices, "solar_kwh")      # solceller: elbilen kan bruge mere end måleren
 
     def g(ts):
         k = _group_key(ts, group)
@@ -113,7 +115,7 @@ def summarize(meter_rows, ev_rows, prices, group="day", ev_logging_from=None,
             groups[k] = {"periode": k, "elbil_kwh": 0.0, "elbil_kr": 0.0,
                          "hus_kwh": 0.0, "hus_kr": 0.0, "total_kwh": 0.0,
                          "maaler_intervaller": 0, "elbil_estimeret": False,
-                         "mangler_pris": False}
+                         "mangler_pris": False, "elbil_sol_kwh": 0.0}
         return groups[k]
 
     # Perioder uden Wall Connector-data -> skøn ud fra måleren
@@ -138,11 +140,13 @@ def summarize(meter_rows, ev_rows, prices, group="day", ev_logging_from=None,
             ev_parts = [(b, ev.get(b, 0.0)) for b in buckets]
             used_ev.update(buckets)
             ev_sum = sum(k for _, k in ev_parts)
-            if ev_sum > kwh > 0:  # Wall Connector måler lidt mere end elmåleren
+            if ev_sum > kwh > 0 and not solar_mode:  # Wall Connector måler lidt mere end elmåleren
                 ev_parts = [(b, k * kwh / ev_sum) for b, k in ev_parts]
         ev_kwh = sum(k for _, k in ev_parts)
         house = max(kwh - ev_kwh, 0.0)
-        bucket_prices = [prices.price(b) for b in buckets]
+        if solar_mode:
+            row["elbil_sol_kwh"] += sum(prices.solar_kwh(b) for b, _ in ev_parts)
+        bucket_prices = [grid.price(b) for b in buckets]
         if any(p is None for p in bucket_prices):
             row["mangler_pris"] = True
             bucket_prices = [p for p in bucket_prices if p is not None] or [0.0]
@@ -169,7 +173,7 @@ def summarize(meter_rows, ev_rows, prices, group="day", ev_logging_from=None,
 
     out = []
     for row in groups.values():
-        for key in ("elbil_kwh", "elbil_kr", "hus_kwh", "hus_kr", "total_kwh"):
+        for key in ("elbil_kwh", "elbil_kr", "hus_kwh", "hus_kr", "total_kwh", "elbil_sol_kwh"):
             row[key] = round(row[key], 3 if key.endswith("kwh") else 2)
         row["total_kr"] = round(row["elbil_kr"] + row["hus_kr"], 2)
         row["maaler_data"] = row.pop("maaler_intervaller") > 0
@@ -223,13 +227,15 @@ def insights(ev_rows, prices, t0, t1, now, cfg):
             by_day.setdefault(local_dt(t).date(), []).append(p)
     all_prices = [p for v in by_day.values() for p in v]
     median = {d: statistics.median(v) for d, v in by_day.items()}
-    kwh = kr = cheap = 0.0
+    kwh = kr = cheap = sol = 0.0
     for r in rows:
         p = prices.price(r["start"])
         if p is None:
             continue
         kwh += r["kwh"]
         kr += r["kwh"] * p
+        if hasattr(prices, "solar_kwh"):
+            sol += prices.solar_kwh(r["start"])
         if p <= median.get(local_dt(r["start"]).date(), p):
             cheap += r["kwh"]
     market = sum(all_prices) / len(all_prices) if all_prices else None
@@ -239,7 +245,8 @@ def insights(ev_rows, prices, t0, t1, now, cfg):
     petrol_km = float(cfg["petrol_l_per_100km"]) * float(cfg["petrol_price_kr_per_l"]) / 100
     r2 = lambda v, n=2: None if v is None else round(v, n)
     return {
-        "kwh": round(kwh, 1), "kr": round(kr, 2),
+        "kwh": round(kwh, 1), "kr": round(kr, 2), "sol_kwh": round(sol, 1),
+        "sol_andel": r2(sol / kwh if kwh else None, 3),
         "snitpris_bil": r2(paid, 3), "snitpris_marked": r2(market, 3),
         "sparet_kr": r2((market - paid) * kwh if market is not None and paid is not None else None),
         "billig_andel": r2(cheap / kwh if kwh else None, 3),

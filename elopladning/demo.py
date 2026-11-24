@@ -65,10 +65,33 @@ def seed(app):
             + (0.4 if 20 <= h < 23 else 0) + random.uniform(0, 0.5)
         meter_rows.append((t, INTERVAL, house_kw / 4 + ev.get(t, 0) * random.uniform(1.0, 1.03)))
 
+    # Solprognose (demo): november-sol, kl. ca. 8–16, med skiftende skydække
+    if float(app.cfg.get("solar_kwp") or 0) > 0:
+        kwp = float(app.cfg["solar_kwp"])
+        db.clear_solar()
+        sol = []
+        for t in range(local_midnight(today - timedelta(days=1)), t_end, 3600):
+            d = local_dt(t)
+            x = (d.hour + 0.5 - 12.0) / 4.2
+            clouds = day_factor[d.date()] / 1.5
+            sol.append((t, 3600, round(max(0.0, kwp * 0.42 * math.exp(-x * x) * clouds), 3)))
+        db.upsert_solar(sol)
     db.upsert_spot(spot_rows)
     db.upsert_meter(meter_rows)
     db.add_ev_kwh({t: k for t, k in ev.items() if t < now})
-    db.set_kv("smart_settings", {"mode": "smart", "klar_kl": "07:00", "kwh": 30.0})
+    db.set_kv("smart_settings", {"mode": "smart", "klar_kl": "07:00", "kwh": 30.0,
+                                 "maal_pct": None, "autopilot": True})
+    db.set_kv("smart_override", None)
+    db.execute("DELETE FROM plug_event")
+    for k in range(56, 0, -1):                     # 8 uger: afgang om morgenen, hjem om aftenen
+        day = today - timedelta(days=k)
+        weekend = day.weekday() >= 5
+        if weekend and random.random() < 0.4:
+            continue
+        out_min = (10 * 60 + random.randint(-40, 50)) if weekend else (7 * 60 + 20 + random.randint(-12, 14))
+        t_out = local_midnight(day) + out_min * 60
+        db.add_plug_event(t_out, "out", round(random.uniform(12, 30), 1))
+        db.add_plug_event(t_out + random.randint(8, 11) * 3600, "in")
     app.last_sync = {"spotpriser": now, "eloverblik_forbrug": now}
 
 
