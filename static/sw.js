@@ -1,6 +1,6 @@
 /* Service worker: gør appen installerbar og viser senest hentede data, når
    der ikke er forbindelse til appen (fx uden for hjemmenetværket). */
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = `shell-${VERSION}`, DATA = `data-${VERSION}`;
 const PRECACHE = ["/", "/vendor/chart.umd.js", "/vendor/inter-var.woff2", "/manifest.webmanifest",
                   "/icons/icon-192.png", "/icons/apple-touch-icon.png"];

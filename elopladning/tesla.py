@@ -176,6 +176,31 @@ def exchange_code(client_id, client_secret, code, redirect_uri, audience,
     })
 
 
+def code_from_redirect(url_or_code, state=None):
+    """Find 'code' i adressen, Tesla sendte dig videre til (eller selve koden)."""
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(url_or_code.strip()).query)
+    if q.get("error"):
+        raise TeslaError(f"Tesla afviste login: {q['error'][0]}")
+    if state and q.get("state") and q["state"][0] != state:
+        raise TeslaError("Forkert 'state' i adressen – start login forfra.")
+    code = q.get("code", [url_or_code.strip()])[0]
+    if not code or "://" in code:
+        raise TeslaError("Fandt ingen kode i adressen.")
+    return code
+
+
+def finish_login(cfg, store, code, token_url=TOKEN_URL):
+    """Byt koden til tokens og gem dem i databasen."""
+    audience = cfg["tesla_api_base"] or REGIONS[cfg["tesla_region"]]
+    tokens = exchange_code(cfg["tesla_client_id"], cfg["tesla_client_secret"], code,
+                           cfg["tesla_redirect_uri"], audience, token_url=token_url)
+    if not tokens.get("refresh_token"):
+        raise TeslaError("Tesla sendte intet refresh token (mangler scope offline_access?)")
+    store.set_kv("tesla_tokens", {"seed": cfg["tesla_refresh_token"].strip(),
+                                  "refresh": tokens["refresh_token"]})
+    return tokens
+
+
 def login_cli(cfg, store, input_fn=input, print_fn=print, token_url=TOKEN_URL):
     """Interaktivt login: åbn adressen, log ind hos Tesla, indsæt adressen du lander på."""
     missing = [k for k in ("tesla_client_id", "tesla_client_secret", "tesla_redirect_uri")
@@ -187,17 +212,11 @@ def login_cli(cfg, store, input_fn=input, print_fn=print, token_url=TOKEN_URL):
     print_fn("   " + authorize_url(cfg["tesla_client_id"], cfg["tesla_redirect_uri"], state) + "\n")
     print_fn("2. Når du er sendt videre (siden må gerne vise en fejl), så kopier hele adressen.")
     pasted = input_fn("\nIndsæt adressen her: ").strip()
-    q = urllib.parse.parse_qs(urllib.parse.urlsplit(pasted).query)
-    code = q.get("code", [pasted])[0]
-    if q.get("state") and q["state"][0] != state:
-        raise SystemExit("Forkert 'state' i adressen – start forfra.")
-    audience = cfg["tesla_api_base"] or REGIONS[cfg["tesla_region"]]
-    tokens = exchange_code(cfg["tesla_client_id"], cfg["tesla_client_secret"], code,
-                           cfg["tesla_redirect_uri"], audience, token_url=token_url)
-    if not tokens.get("refresh_token"):
-        raise SystemExit("Tesla sendte intet refresh token (mangler scope offline_access?)")
-    store.set_kv("tesla_tokens", {"seed": cfg["tesla_refresh_token"].strip(),
-                                  "refresh": tokens["refresh_token"]})
+    try:
+        code = code_from_redirect(pasted, state)
+        tokens = finish_login(cfg, store, code, token_url=token_url)
+    except TeslaError as e:
+        raise SystemExit(str(e)) from None
     print_fn("\nLogin gemt i databasen.")
     try:
         car = from_config(cfg, store)

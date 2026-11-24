@@ -25,7 +25,7 @@
   --card:#ffffff; --card-hi:#ffffff; --raise:#f5f4f1; --glass:rgba(255,255,255,.78);
   --ink:#121317; --ink-2:#3f434c; --muted:#6b707b; --faint:#9a9ea7;
   --line:rgba(17,19,23,.08); --line-2:rgba(17,19,23,.14);
-  --ev:#2a78d6; --ev-2:#6aa7ee; --ev-glow:rgba(42,120,214,.28); --house:#d97a14;
+  --ev:#2a78d6; --ev-2:#6aa7ee; --ev-glow:rgba(42,120,214,.28); --house:#d97a14; --sun:#1baf7a;
   --bar:#c9ccd3; --bar-past:rgba(150,155,165,.28);
   --heat-lo:#ece9fb; --heat-hi:#4a3aa7;
   --good:#0a7d0a; --warn:#b26a00; --crit:#c53030;
@@ -39,7 +39,7 @@
     --card:#14161b; --card-hi:#181b21; --raise:#1c1f26; --glass:rgba(20,22,27,.78);
     --ink:#eef0f4; --ink-2:#c5c9d2; --muted:#8b92a0; --faint:#5d6370;
     --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
-    --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
+    --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c; --sun:#199e70;
     --bar:#3c414c; --bar-past:rgba(90,96,108,.35);
     --heat-lo:#25253a; --heat-hi:#b3abf5;
     --good:#3fbf5a; --warn:#fab219; --crit:#e66767;
@@ -53,7 +53,7 @@
   --card:#14161b; --card-hi:#181b21; --raise:#1c1f26; --glass:rgba(20,22,27,.78);
   --ink:#eef0f4; --ink-2:#c5c9d2; --muted:#8b92a0; --faint:#5d6370;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
-  --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c;
+  --ev:#3987e5; --ev-2:#7db4f5; --ev-glow:rgba(57,135,229,.45); --house:#c47d1c; --sun:#199e70;
   --bar:#3c414c; --bar-past:rgba(90,96,108,.35);
   --heat-lo:#25253a; --heat-hi:#b3abf5;
   --good:#3fbf5a; --warn:#fab219; --crit:#e66767;
@@ -272,6 +272,74 @@ tbody tr:hover td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
 .more{display:flex;justify-content:center;margin-top:12px}
 .note{font-size:12px;color:var(--faint);margin-top:14px;line-height:1.55}
 
+/* ---------- Plan: autopilot ---------- */
+.next{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.next .when{font-size:26px;font-weight:300;letter-spacing:-.03em;margin:6px 0 2px}
+.next .actions{display:flex;gap:8px;flex-wrap:wrap}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:16px}
+@media (max-width:520px){.week{gap:3px}.week div{padding:6px 1px;font-size:10px;border-radius:9px}.week div b{font-size:11.5px}}
+.week div{background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center;font-size:11px;color:var(--muted)}
+.week div b{display:block;font-size:14px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+.week div.on{border-color:color-mix(in srgb,var(--ev) 60%,transparent);background:color-mix(in srgb,var(--ev) 10%,var(--raise))}
+.week div.none b{color:var(--faint)}
+.pill.ev{background:color-mix(in srgb,var(--ev) 14%,transparent);color:var(--ev)}
+.pill.sun{background:color-mix(in srgb,var(--sun) 15%,transparent);color:var(--sun)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.switch input{appearance:none;-webkit-appearance:none;width:42px;height:24px;border-radius:99px;background:var(--line-2);position:relative;
+  cursor:pointer;transition:background .2s;flex:none;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch input:checked{background:var(--ev)}
+.switch input:checked::after{transform:translateX(18px)}
+
+/* ---------- Indstillinger ---------- */
+.welcome{background:radial-gradient(600px 300px at 0% 0%,color-mix(in srgb,var(--ev) 18%,transparent),transparent 70%),
+  linear-gradient(180deg,var(--card-hi),var(--card))}
+.welcome h2{font-size:24px;font-weight:400;letter-spacing:-.02em}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;counter-reset:st}
+.steps span{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);background:var(--raise);
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px 5px 6px}
+.steps span::before{counter-increment:st;content:counter(st);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+  background:var(--line-2);color:var(--ink);font-size:11px;font-weight:600}
+.steps span.ok{color:var(--ink)}
+.steps span.ok::before{content:"✓";background:var(--good);color:#fff}
+details.set{margin-bottom:12px;padding:0;overflow:hidden}
+details.set summary{list-style:none;cursor:pointer;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+details.set summary::-webkit-details-marker{display:none}
+details.set summary h2{display:flex;align-items:center;gap:10px}
+details.set summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .2s;margin-left:6px;flex:none}
+details.set[open] summary::after{transform:rotate(-135deg)}
+.set-body{padding:0 22px 22px}
+.set-intro{font-size:13.5px;color:var(--ink-2);margin:0 0 16px;max-width:760px;line-height:1.55}
+.set-intro a{color:var(--ev)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px}
+.f{display:grid;gap:5px;align-content:start}
+.f>span{font-size:12px;font-weight:550;color:var(--ink-2)}
+.f small{font-size:11.5px;color:var(--faint);line-height:1.4}
+.f input[type=text],.f input[type=password],.f select{width:100%;background:var(--raise);border:1px solid var(--line-2);border-radius:10px;
+  padding:9px 11px;font-size:14px;color:var(--ink)}
+.f input:focus,.f select:focus{outline:2px solid color-mix(in srgb,var(--ev) 55%,transparent);outline-offset:1px}
+.f .unit{position:relative}
+.f .unit em{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12px;color:var(--faint);pointer-events:none}
+.f .unit input{padding-right:110px}
+.f.wide{grid-column:1/-1}
+.dict{display:grid;gap:6px}
+.dict div{display:grid;grid-template-columns:1fr 120px 32px;gap:6px}
+.set-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:18px}
+.result{font-size:13px;padding:8px 12px;border-radius:10px;margin-top:12px}
+.result.ok{color:var(--good);background:color-mix(in srgb,var(--good) 11%,transparent)}
+.result.bad{color:var(--crit);background:color-mix(in srgb,var(--crit) 11%,transparent)}
+.st{font-size:11px;font-weight:600;border-radius:99px;padding:2px 9px;letter-spacing:.02em}
+.st.klar{color:var(--good);background:color-mix(in srgb,var(--good) 13%,transparent)}
+.st.mangler,.st.login{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.st.tjek{color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.st.fra{color:var(--muted);background:var(--raise)}
+.toast{position:fixed;z-index:60;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--tip);color:var(--tip-ink);padding:10px 16px;border-radius:12px;font-size:13.5px;font-weight:500;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);animation:enter .25s ease both}
+@media (min-width:761px){.toast{bottom:32px}}
+
 .errors{border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:color-mix(in srgb,var(--warn) 9%,var(--card));
   border-radius:16px;padding:12px 16px;margin-bottom:16px;font-size:13px;display:none}
 .errors div+div{margin-top:4px}
@@ -299,6 +367,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
     <button data-tab="plan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Plan</button>
     <button data-tab="priser"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M9 20V4M14 20v-7M19 20V8"/></svg>Priser</button>
     <button data-tab="historik"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2"/></svg>Historik</button>
+    <button data-tab="indstillinger" aria-label="Indstillinger"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="tl">Opsætning</span></button>
   </nav>
   <div class="hright">
     <button class="btn primary" id="installBtn" hidden>
@@ -358,6 +427,18 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 
 <!-- ======================= PLAN ======================= -->
 <section class="view" id="view-plan" hidden>
+  <section class="card wide" id="nextCard">
+    <div class="next">
+      <div><div class="label" id="nextLabel">Næste afgang</div><div class="when" id="nextWhen">–</div><div class="sub" id="nextWhy"></div></div>
+      <div class="actions" id="nextActions">
+        <button class="btn" type="button" data-ov="full">Lang tur – lad helt op</button>
+        <button class="btn" type="button" data-ov="time">Anden tid …</button>
+        <input type="time" id="ovTime" step="900" hidden style="background:var(--raise);border:1px solid var(--line-2);border-radius:10px;padding:6px 9px;color:var(--ink)">
+        <button class="btn" type="button" data-ov="reset" hidden>Nulstil</button>
+      </div>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
   <section class="card wide">
     <div class="head">
       <div><h2>Smart opladning</h2><div class="sub">Lad i de billigste kvarterer – og vær klar til tiden</div></div>
@@ -375,13 +456,15 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
         <div class="tl-hint">Træk i håndtaget for at vælge, hvornår bilen skal være klar.</div>
       </div>
       <form class="panel" id="smartForm">
+        <label class="switch"><span><span class="flabel">Autopilot</span><br><span class="sub" style="font-size:12px">Lærer hvornår du plejer at køre</span></span>
+          <input type="checkbox" id="autoToggle"></label>
         <div class="field">
           <div class="row"><label for="targetRange" id="targetLabel">Mål</label><b id="targetVal">–</b></div>
           <input type="range" id="targetRange" min="50" max="100" step="5">
           <div class="scale" id="targetScale"><span>50 %</span><span>100 %</span></div>
         </div>
         <div class="field">
-          <div class="row"><label for="smartReady">Klar kl.</label><input type="time" id="smartReady" step="900" required></div>
+          <div class="row"><label for="smartReady" id="readyLabel">Klar kl.</label><input type="time" id="smartReady" step="900" required></div>
         </div>
         <div class="status" id="smartStatus"></div>
       </form>
@@ -400,6 +483,15 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
     </div>
     <div class="fc" id="forecast"></div>
   </section>
+  <section class="card wide" id="solarCard" hidden>
+    <div class="head">
+      <div><h2>Solceller i dag og i morgen</h2><div class="sub">Forventet produktion ud fra vejrudsigten (skøn)</div></div>
+      <div class="legend"><span><i style="background:var(--sun)"></i>Solproduktion</span></div>
+    </div>
+    <svg id="solarChart" viewBox="0 0 600 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block"></svg>
+    <div class="fc-axis" style="grid-template-columns:1fr 1fr;gap:0;margin-top:6px"><span>I dag</span><span>I morgen</span></div>
+    <div class="sub" id="solarSum" style="margin-top:10px"></div>
+  </section>
   <section class="card wide">
     <div class="head"><div><h2>Hvad består prisen af lige nu?</h2><div class="sub">kr/kWh – total <span class="ink2" id="partsTotal">–</span></div></div></div>
     <div class="parts" id="priceParts"></div>
@@ -411,6 +503,12 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
     </div>
     <div class="chart"><canvas id="priceChart" aria-label="Elpris pr. kvarter"></canvas></div>
   </section>
+</section>
+
+<!-- ======================= INDSTILLINGER ======================= -->
+<section class="view" id="view-indstillinger" hidden>
+  <section class="card wide welcome" id="welcome" hidden></section>
+  <div id="setup"></div>
 </section>
 
 <!-- ======================= HISTORIK ======================= -->
@@ -452,6 +550,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 </section>
 </main>
 <div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden></div>
 
 <script src="vendor/chart.umd.js"></script>
 <script>
@@ -508,15 +607,20 @@ function countTo(el, v, d=0){
 }
 
 /* ---------- faner ---------- */
-const TABS = ["nu","plan","priser","historik"];
+const TABS = ["nu","plan","priser","historik","indstillinger"];
 function showTab(t, scroll=true){
+  const [name, query] = (t || "").split("?");
+  t = name;
+  if(query){ const q = new URLSearchParams(query), tm = q.get("tesla");
+    if(tm) toast(tm === "ok" ? "Tesla er forbundet ✓" : "Tesla-login fejlede: " + tm, 5000); }
   if(t === "smart") t = "plan";
   if(!TABS.includes(t)) t = "nu";
   TABS.forEach(x => $("view-"+x).hidden = x !== t);
   [...$("tabs").children].forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   if(location.hash !== "#"+t) history.replaceState(null, "", "#"+t);
   if(scroll) window.scrollTo({top:0});
-  requestAnimationFrame(() => { priceChart?.resize(); costChart?.resize(); if(t === "plan") renderSmart(); });
+  requestAnimationFrame(() => { priceChart?.resize(); costChart?.resize(); if(t === "plan") renderSmart();
+    if(t === "indstillinger") loadSettings(); });
 }
 $("tabs").addEventListener("click", e => { const t = e.target.closest("button")?.dataset.tab; if(t) showTab(t); });
 window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
@@ -568,7 +672,8 @@ function batterySVG(frac, target, charging, label){
   </svg>`;
 }
 
-function flowSVG(houseKw, carKw, estHouse){
+function flowSVG(houseKw, carKw, estHouse, sunKw){
+  if(sunKw != null) return flowSunSVG(houseKw || 0, carKw || 0, sunKw);
   const ICON = {
     grid: "M12 2 7 22M12 2l5 20M8.6 9h6.8M7.7 14h8.6M5 22h14",
     house: "M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20",
@@ -591,6 +696,37 @@ function flowSVG(houseKw, carKw, estHouse){
   </svg>`;
 }
 
+const FLOW_ICON = {
+  grid: "M12 2 7 22M12 2l5 20M8.6 9h6.8M7.7 14h8.6M5 22h14",
+  house: "M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20",
+  car: "M4 16.5V13l2.2-5h11.6L20 13v3.5M4 16.5h16M6.5 16.5V19M17.5 16.5V19M7.5 12.8h.01M16.5 12.8h.01",
+  sun: "M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
+};
+function flowSunSVG(house, car, sun){
+  // Solen dækker først huset, så bilen; resten sælges. Nettet dækker det, solen ikke kan.
+  const sH = Math.min(sun, house), sC = Math.min(sun - sH, car), exp = Math.max(sun - sH - sC, 0);
+  const gH = house - sH, gC = car - sC;
+  const speed = kw => (1.8 / Math.max(0.35, Math.min(kw, 11) ** .5)).toFixed(2) + "s";
+  const flow = (d, kw, color) => `<path class="path-bg" d="${d}"/>` + (kw > 0.05 ?
+    `<path class="path" d="${d}" stroke="${color}" style="animation-duration:${speed(kw)};filter:drop-shadow(0 0 4px ${color})"/>` : "");
+  const node = (x, y, icon, color, name, val, below=true) => `
+    <circle class="node" cx="${x}" cy="${y}" r="26"/>
+    <g transform="translate(${x-12} ${y-12})" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${icon}"/></g>
+    ${below ? `<text x="${x}" y="${y+44}" text-anchor="middle">${val}</text><text class="s" x="${x}" y="${y+58}" text-anchor="middle">${name}</text>`
+            : `<text x="${x}" y="${y-44}" text-anchor="middle">${val}</text><text class="s" x="${x}" y="${y-31}" text-anchor="middle">${name}</text>`}`;
+  return `<svg viewBox="0 0 400 252" role="img" aria-label="Energiflow: sol ${kr(sun,1)} kW, hus ${kr(house,1)} kW, bil ${kr(car,1)} kW">
+    ${flow("M100,62 L290,62", sH, "var(--sun)")}
+    ${flow("M96,76 C190,76 205,176 292,176", sC, "var(--sun)")}
+    ${flow("M96,176 C190,176 205,76 292,76", gH, "var(--house)")}
+    ${flow("M100,190 L290,190", gC, "var(--ev)")}
+    ${flow("M72,90 L72,162", exp, "var(--sun)")}
+    ${node(72, 62, FLOW_ICON.sun, "var(--sun)", "Solceller · skøn", `≈ ${kr(sun,1)} kW`, false)}
+    ${node(72, 190, FLOW_ICON.grid, "var(--ink-2)", exp > 0.05 ? `Elnettet · sælger ${kr(exp,1)} kW` : "Elnettet", `${kr(gH + gC,1)} kW`)}
+    ${node(318, 62, FLOW_ICON.house, "var(--house)", "Huset · skøn", `≈ ${kr(house,1)} kW`, false)}
+    ${node(318, 190, FLOW_ICON.car, "var(--ev)", "Elbilen", `${kr(car,1)} kW`)}
+  </svg>`;
+}
+
 function donutSVG(frac, a="var(--ev)", b="var(--house)"){
   const r = 40, C = 2*Math.PI*r, f = Math.max(0, Math.min(1, frac || 0)), gap = f > 0 && f < 1 ? 3 : 0;
   return `<svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${r}" fill="none" stroke="${b}" stroke-width="10"
@@ -610,6 +746,7 @@ async function loadStatus(){
   chips.push(chip("Spotpriser", !s.fejl.spotpriser));
   if(s.konfigureret.tesla) chips.push(chip("Tesla", !s.smart_fejl && !s.fejl.tesla));
   if(s.konfigureret.notifikationer) chips.push(chip("Notifikationer", true));
+  if(s.sol && s.sol.konfigureret) chips.push(chip("Solprognose", !s.fejl.solprognose));
   $("chips").innerHTML = chips.join("");
   renderOffline();
   $("notifyBtn").hidden = !s.konfigureret.notifikationer;
@@ -622,7 +759,8 @@ async function loadStatus(){
 
   const wc = s.wall_connector;
   const carKw = wc.online && wc.lader ? wc.effekt_kw : 0;
-  $("flow").innerHTML = flowSVG(s.hus_typisk_kw, carKw, true);
+  const sun = s.sol && s.sol.konfigureret ? (s.sol.kw_nu || 0) : null;
+  $("flow").innerHTML = flowSVG(s.hus_typisk_kw, carKw, true, sun);
   $("flowNote").textContent = s.hus_typisk_kw != null ? "Huset: typisk forbrug på dette tidspunkt" : "";
 
   const p = s.pris_nu;
@@ -730,6 +868,33 @@ function drawSpark(d){
   $("sparkCap").textContent = `Næste 24 t · lavest ${kr(lo)} kr kl. ${fmtTime(pts[iMin].t)}`;
 }
 
+function renderSolar(d){
+  const card = $("solarCard"), sol = S.status && S.status.sol;
+  const pts = d.priser.filter(p => p.t >= d.i_dag && p.sol_kw !== undefined);
+  card.hidden = !(sol && sol.konfigureret && pts.length);
+  if(card.hidden) return;
+  const W = 600, H = 150, pad = 8, t0 = d.i_dag, span = 2 * 86400;
+  const max = Math.max(1, ...pts.map(p => p.sol_kw || 0));
+  const x = t => (t - t0) / span * W, y = kw => H - pad - (kw || 0) / max * (H - 2*pad);
+  // Prognosen er pr. time: tegn en blød kurve gennem timernes midtpunkter
+  const hrs = pts.filter(p => p.t % 3600 === 0);
+  const P = hrs.map(p => [x(p.t + 1800), y(p.sol_kw)]);
+  let line = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for(let i = 1; i < P.length; i++){
+    const [x0,y0] = P[i-1], [x1,y1] = P[i], mx = (x0 + x1) / 2;
+    line += `C${mx.toFixed(1)},${y0.toFixed(1)} ${mx.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const nowX = x(d.nu);
+  $("solarChart").innerHTML = `<defs><linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--sun)" stop-opacity=".45"/><stop offset="1" stop-color="var(--sun)" stop-opacity=".03"/></linearGradient></defs>
+    <line x1="${W/2}" x2="${W/2}" y1="0" y2="${H}" stroke="var(--line-2)"/>
+    <path d="${line}L${P[P.length-1][0]},${H}L${P[0][0]},${H}Z" fill="url(#sun)"/>
+    <path d="${line}" fill="none" stroke="var(--sun)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <line x1="${nowX}" x2="${nowX}" y1="0" y2="${H}" stroke="var(--ink)" stroke-dasharray="3 4" opacity=".5" vector-effect="non-scaling-stroke"/>`;
+  $("solarSum").innerHTML = `I dag ≈ <b class="ink2">${kr(sol.i_dag_kwh,1)} kWh</b> · i morgen ≈ <b class="ink2">${kr(sol.i_morgen_kwh,1)} kWh</b>
+    · højst ${kr(max,1)} kW · anlæg ${kr(sol.kwp,1)} kWp`;
+}
+
 function renderForecast(d){
   const plan = new Set(d.plan || []);
   const days = {};
@@ -766,7 +931,8 @@ $("forecast").addEventListener("pointermove", e => {
   const c = e.target.closest("[data-i]"), tip = $("tip");
   if(!c || !S.prices){ tip.hidden = true; return; }
   const p = S.prices.priser[+c.dataset.i], pl = new Set(S.prices.plan || []);
-  tip.innerHTML = `${fmtDay(p.t)} · ${fmtRange([p.t, p.t+900])}<br><b>${kr(p.total)} kr/kWh</b>${pl.has(p.t) ? " · smart-plan" : ""}`;
+  tip.innerHTML = `${fmtDay(p.t)} · ${fmtRange([p.t, p.t+900])}<br><b>${kr(p.total)} kr/kWh</b>${pl.has(p.t) ? " · smart-plan" : ""}` +
+    (p.sol_kw ? `<br>Sol ≈ ${kr(p.sol_kw,1)} kW · lader for ≈ ${kr(p.lade_pris)} kr/kWh` : "");
   tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; tip.hidden = false;
 });
 $("forecast").addEventListener("pointerleave", () => $("tip").hidden = true);
@@ -785,6 +951,7 @@ function renderPrices(){
   $("hoursSub").textContent = `≈ ${Math.round(hours*chargeKw)} kWh ved ${kr(chargeKw,0)} kW`;
   drawSpark(d);
   renderForecast(d);
+  renderSolar(d);
 
   const pts = d.priser.filter(p => p.t >= d.i_dag);
   const nowIdx = pts.findIndex(p => p.t <= d.nu && d.nu < p.t + 900);
@@ -864,18 +1031,74 @@ $("timeline").addEventListener("pointermove", e => { if(dragging){ dragging.t = 
 $("timeline").addEventListener("pointerup", () => {
   if(!dragging) return;
   const t = dragging.t; dragging = null;
-  $("smartReady").value = hhmm(t);
-  saveSmart({klar_kl: hhmm(t)});
+  setDeadline(hhmm(t));
 });
 $("timeline").addEventListener("keydown", e => {
   if(!S.smart || !S.smart.plan || !["ArrowLeft","ArrowRight"].includes(e.key)) return;
   e.preventDefault();
-  saveSmart({klar_kl: hhmm(S.smart.plan.klar + (e.key === "ArrowRight" ? 900 : -900))});
+  setDeadline(hhmm(S.smart.plan.klar + (e.key === "ArrowRight" ? 900 : -900)));
+});
+
+// Med autopilot ændrer et træk kun næste afgang; ellers den faste tid
+function setDeadline(hh){
+  const auto = S.smart && S.smart.indstillinger.autopilot;
+  if(auto){ saveSmart({engang: {...(S.smart.naeste.engang || {}), klar_kl: hh}}); toast("Ændret for næste afgang"); }
+  else { $("smartReady").value = hh; saveSmart({klar_kl: hh}); }
+}
+const WD = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
+const wdOf = iso => (new Date(iso + "T12:00Z").getUTCDay() + 6) % 7;
+function relDay(iso){
+  const today = dayKey(nowS()), tomorrow = dayKey(nowS() + 86400);
+  return iso === today ? "I dag" : iso === tomorrow ? "I morgen" :
+    new Date(iso + "T12:00Z").toLocaleDateString("da-DK",{weekday:"long",timeZone:TZ}).replace(/^./, c => c.toUpperCase());
+}
+function renderNext(){
+  const s = S.smart; if(!s) return;
+  const n = s.naeste, st = s.indstillinger, ap = s.autopilot;
+  $("nextLabel").textContent = n.kilde === "engang" ? "Næste afgang · ændret for denne gang"
+    : n.kilde === "autopilot" ? "Næste afgang · autopilot" : "Næste afgang · fast tid";
+  $("nextWhen").textContent = `${relDay(n.dato)} kl. ${fmtTime(n.deadline)}`;
+  const why = [];
+  if(n.forklaring) why.push(esc(n.forklaring));
+  else if(n.kilde === "manuel") why.push("Autopiloten er slået fra – appen bruger den faste tid.");
+  if(n.engang){
+    const e = n.engang, parts = [];
+    if(e.klar_kl) parts.push(`klar kl. ${e.klar_kl.replace(":", ".")}`);
+    if(e.maal_pct) parts.push(`lad til ${Math.round(e.maal_pct)} %`);
+    if(e.kwh) parts.push(`${kr(e.kwh,0)} kWh`);
+    why.push(`<span class="pill ev">Kun denne gang: ${parts.join(", ")}</span>`);
+  } else if(n.kwh_laert && s.kilde !== "soc") why.push(`Lader typisk ${kr(n.kwh_laert,0)} kWh (lært)`);
+  $("nextWhy").innerHTML = why.join("<br>");
+  document.querySelector('[data-ov="reset"]').hidden = !n.engang;
+  const days = ap && ap.dage ? ap.dage : null, nextWd = wdOf(n.dato);
+  $("week").hidden = !st.autopilot;
+  $("week").innerHTML = WD.map((d, i) => {
+    const x = days && days[i];
+    return `<div class="${i === nextWd ? "on" : ""} ${x ? "" : "none"}" title="${x ? `Typisk afgang ${x.typisk} (${x.fra}–${x.til}), ${x.antal} gange` : "Ikke nok data endnu"}">
+      ${d}<b>${x ? x.klar_kl.replace(":", ".").replace(/^0/, "") : "–"}</b></div>`;
+  }).join("");
+}
+$("nextActions").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b || !S.smart) return;
+  const s = S.smart, cur = s.naeste.engang || {};
+  if(b.dataset.ov === "full"){
+    saveSmart({engang: s.kilde === "soc" || s.soc ? {...cur, maal_pct: 100} : {...cur, kwh: Math.round(s.batteri_kwh * 0.9)}});
+    toast("Lader helt op til næste afgang");
+  } else if(b.dataset.ov === "time"){
+    const t = $("ovTime"); t.hidden = false; t.value = hhmm(s.naeste.deadline); t.focus();
+  } else if(b.dataset.ov === "reset"){ saveSmart({engang: null}); toast("Tilbage til normal plan"); }
+});
+$("ovTime").addEventListener("change", e => { if(e.target.value){ setDeadline(e.target.value); e.target.hidden = true; } });
+$("autoToggle").addEventListener("change", e => {
+  saveSmart({autopilot: e.target.checked}); toast(e.target.checked ? "Autopilot slået til" : "Autopilot slået fra");
 });
 
 function renderSmart(){
   const s = S.smart; if(!s) return;
   const st = s.indstillinger, p = s.plan;
+  renderNext();
+  $("autoToggle").checked = !!st.autopilot;
+  $("readyLabel").textContent = st.autopilot ? "Fast tid (når intet er lært)" : "Klar kl.";
   [...$("modeSeg").children].forEach(b => b.classList.toggle("on", b.dataset.m === st.mode));
   if(document.activeElement !== $("smartReady")) $("smartReady").value = st.klar_kl;
 
@@ -905,6 +1128,7 @@ function renderSmart(){
     sub.push(`${kr(p.kwh,1)} kWh · ca. ${kr(p.kr)} kr · klar kl. ${fmtTime(p.klar)}`);
     if(p.kr_hvis_nu != null && p.kr != null && p.kr_hvis_nu - p.kr >= 0.5)
       saving = `<span class="saving">↓ ${kr(p.kr_hvis_nu - p.kr)} kr billigere end at lade nu</span>`;
+    if(p.sol_kwh >= 0.5) sub.push(`<span style="color:var(--sun)">☀</span> ca. ${kr(p.sol_kwh,1)} kWh fra egne solceller`);
     if(p.estimeret) sub.push("Stribede felter: morgendagens priser er skønnet (kommer ca. kl. 13)");
     if(p.naar_ikke) sub.push(`<span class="warn">▲ Ikke tid nok til at nå det hele inden kl. ${fmtTime(p.klar)}</span>`);
   }
@@ -972,6 +1196,7 @@ async function loadInsights(){
       <div class="c">${c.billig_andel != null ? Math.round(c.billig_andel*100) + "%" : "–"}</div></div>
       <div><div class="label">Ladet i billige timer</div>
       <div class="sub" style="margin-top:6px">Andel af månedens kWh ladet til under døgnets midterpris</div>
+      ${c.sol_kwh ? `<div class="sub" style="margin-top:6px"><span style="color:var(--sun)">☀</span> ${kr(c.sol_kwh,0)} kWh fra egne solceller</div>` : ""}
       ${f.billig_andel != null ? `<div class="delta">Sidste måned: ${Math.round(f.billig_andel*100)} %</div>` : ""}</div></div>`;
   countTo($("insSaved"), saved == null ? null : Math.abs(saved), 0);
   countTo($("insPetrol"), c.kwh ? c.sparet_vs_benzin_kr : null, 0);
@@ -1045,6 +1270,138 @@ async function loadSessions(){
   $("sessMore").textContent = expanded.sess ? "Vis færre" : `Vis alle ${ss.length}`;
 }
 
+/* ---------- små beskeder ---------- */
+function toast(msg, ms=2600){
+  const el = $("toast"); el.textContent = msg; el.hidden = false;
+  clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, ms);
+}
+
+/* ---------- opsætning ---------- */
+const ST_TEXT = {klar:"Klar", mangler:"Mangler", tjek:"Tjek", fra:"Ikke sat op", login:"Log ind"};
+const STEPS = [["wallconnector","Wall Connector"],["eloverblik","Eloverblik"],["priser","Elpris"],["bil","Bilen"],["solceller","Solceller"]];
+let SET = null;
+const numFmt = v => v == null || v === "" ? "" : String(v).replace(".", ",");
+
+function fieldHTML(f, v){
+  const id = "f_" + f.key, help = f.hjaelp ? `<small>${esc(f.hjaelp)}</small>` : "";
+  const label = `<span>${esc(f.label)}</span>`;
+  if(f.type === "bool")
+    return `<label class="f switch" style="grid-column:1/-1"><span>${esc(f.label)}</span><input type="checkbox" id="${id}" data-k="${f.key}" ${v ? "checked" : ""}></label>`;
+  if(f.type === "select")
+    return `<label class="f">${label}<select id="${id}" data-k="${f.key}">${f.valg.map(([k,n]) =>
+      `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>${help}</label>`;
+  if(f.type === "dict"){
+    const rows = Object.entries(v || {}); if(!rows.length) rows.push(["", ""]);
+    return `<div class="f wide">${label}<div class="dict" data-dict="${f.key}">${rows.map(([n,a]) => dictRow(n, a)).join("")}</div>
+      <div><button class="btn" type="button" data-add="${f.key}">+ Tilføj</button></div>${help}</div>`;
+  }
+  const secret = f.type === "secret";
+  const ph = secret ? (v && v.saet ? "•••••• gemt – skriv for at ændre" : "Indsæt her") : (f.placeholder || "");
+  const val = secret ? "" : f.type === "number" ? numFmt(v) : (v ?? "");
+  const input = `<input type="${secret ? "password" : "text"}" id="${id}" data-k="${f.key}" value="${esc(val)}"
+    placeholder="${esc(ph)}" ${f.type === "number" ? 'inputmode="decimal"' : ""} autocomplete="off" spellcheck="false">`;
+  return `<label class="f">${label}${f.enhed ? `<div class="unit">${input}<em>${esc(f.enhed)}</em></div>` : input}${help}</label>`;
+}
+const dictRow = (n, a) => `<div><input type="text" placeholder="Navn" value="${esc(n)}">
+  <input type="text" inputmode="decimal" placeholder="kr/md" value="${esc(numFmt(a))}">
+  <button class="iconbtn" type="button" data-del aria-label="Fjern">×</button></div>`;
+
+function sectionHTML(sec, st){
+  const v = SET.vaerdier, open = st !== "klar" && !(sec.valgfri && st === "fra") || SET.foerste_start && !sec.valgfri;
+  const extra = sec.id === "tesla" ? teslaHTML() : sec.id === "solceller" ? `<button class="btn" type="button" data-geo>Brug min placering</button>` : "";
+  return `<details class="card set" data-sec="${sec.id}" ${open ? "open" : ""}>
+    <summary><h2>${esc(sec.titel)} <span class="st ${st}">${ST_TEXT[st] || st}</span></h2></summary>
+    <div class="set-body">
+      <p class="set-intro">${esc(sec.intro)}${sec.link ? ` <a href="${sec.link}" target="_blank" rel="noopener">${sec.link.replace("https://","")} ↗</a>` : ""}</p>
+      <div class="fgrid">${sec.felter.map(f => fieldHTML(f, v[f.key])).join("")}</div>
+      <div class="set-actions">
+        <button class="btn primary" type="button" data-save ${SET.kan_gemme ? "" : "disabled"}>Gem</button>
+        ${sec.test ? `<button class="btn" type="button" data-test="${sec.test}">Test forbindelse</button>` : ""}
+        ${extra}
+      </div>
+      <div class="result" data-result hidden></div>
+    </div></details>`;
+}
+function teslaHTML(){
+  return `<button class="btn" type="button" data-tesla-login ${SET.tesla_login ? "" : "disabled"}>Log ind med Tesla</button>
+    <span class="sub" id="teslaState"></span>`;
+}
+
+async function loadSettings(){
+  SET = await j("/api/settings");
+  const wl = $("welcome");
+  const done = STEPS.filter(([id]) => SET.status[id] === "klar").length;
+  wl.hidden = !(SET.foerste_start || done < 3);
+  wl.innerHTML = `<h2>${SET.foerste_start ? "Velkommen – lad os sætte appen op" : "Næsten klar"}</h2>
+    <p class="sub" style="max-width:720px;margin:6px 0 0">Udfyld afsnittene herunder og tryk <b>Test forbindelse</b> –
+    så ser du med det samme, om det virker. Det tager et par minutter. Solceller, Tesla og notifikationer er valgfrie.</p>
+    <div class="steps">${STEPS.map(([id,n]) => `<span class="${SET.status[id] === "klar" ? "ok" : ""}">${n}</span>`).join("")}</div>
+    ${SET.kan_gemme ? "" : `<p class="warn" style="margin:14px 0 0;font-size:13px">Demo-tilstand: indstillinger kan ses, men ikke gemmes.</p>`}`;
+  const open = new Set([...document.querySelectorAll("details.set[open]")].map(d => d.dataset.sec));
+  const had = !!document.querySelector("details.set");
+  $("setup").innerHTML = SET.afsnit.map(sec => sectionHTML(sec, SET.status[sec.id])).join("");
+  if(had) document.querySelectorAll("details.set").forEach(d => d.open = open.has(d.dataset.sec));
+  safe(loadTeslaState)();
+}
+async function loadTeslaState(){
+  const el = $("teslaState"); if(!el) return;
+  const t = await j("/api/tesla/status");
+  el.textContent = t.styrer ? "✓ Forbundet – appen kan styre bilen" : t.logget_ind ? "Logget ind" : t.klar_til_login ? "Klar til login" : "Udfyld og gem felterne først";
+}
+function collect(secEl){
+  const body = {};
+  secEl.querySelectorAll("[data-k]").forEach(el => { body[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value; });
+  secEl.querySelectorAll("[data-dict]").forEach(box => {
+    const d = {}; box.querySelectorAll("div").forEach(r => { const [n, a] = r.querySelectorAll("input");
+      if(n.value.trim()) d[n.value.trim()] = a.value || "0"; });
+    body[box.dataset.dict] = d;
+  });
+  return body;
+}
+function showResult(secEl, ok, text){
+  const r = secEl.querySelector("[data-result]");
+  r.hidden = false; r.className = "result " + (ok ? "ok" : "bad"); r.textContent = (ok ? "✓ " : "✕ ") + text;
+}
+$("setup").addEventListener("click", async e => {
+  const secEl = e.target.closest("details.set"); if(!secEl) return;
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.add !== undefined){ secEl.querySelector(`[data-dict="${b.dataset.add}"]`).insertAdjacentHTML("beforeend", dictRow("", "")); return; }
+  if(b.dataset.del !== undefined){ b.parentElement.remove(); return; }
+  if(b.dataset.save !== undefined){
+    b.disabled = true;
+    try { await post("/api/settings", collect(secEl)); toast("Gemt ✓"); await loadSettings();
+      refreshAll(); }
+    catch(err){ showResult(secEl, false, err.message); }
+    finally { b.disabled = !SET.kan_gemme; }
+  }
+  if(b.dataset.test){
+    b.disabled = true; const old = b.textContent; b.textContent = "Tester …";
+    try {
+      const r = await post("/api/test/" + b.dataset.test, collect(secEl));
+      showResult(secEl, r.ok, r.tekst);
+      if(r.maalepunkter && r.maalepunkter.length){
+        const inp = secEl.querySelector('[data-k="metering_point_id"]');
+        const box = secEl.querySelector("[data-result]");
+        box.insertAdjacentHTML("beforeend", `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${r.maalepunkter.map(m =>
+          `<button class="btn" type="button" data-mp="${esc(m.id)}">Brug ${esc(m.adresse || m.id)} (${esc(m.type)})</button>`).join("")}</div>`);
+        box.querySelectorAll("[data-mp]").forEach(x => x.onclick = () => { inp.value = x.dataset.mp; toast("Målepunkt valgt – tryk Gem"); });
+      }
+    } catch(err){ showResult(secEl, false, err.message); }
+    finally { b.disabled = false; b.textContent = old; }
+  }
+  if(b.dataset.teslaLogin !== undefined){
+    try { const r = await post("/api/tesla/login"); location.href = r.url; } catch(err){ showResult(secEl, false, err.message); }
+  }
+  if(b.dataset.geo !== undefined){
+    if(!navigator.geolocation){ showResult(secEl, false, "Browseren kan ikke give placeringen (kræver https)."); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      secEl.querySelector('[data-k="solar_lat"]').value = numFmt(pos.coords.latitude.toFixed(2));
+      secEl.querySelector('[data-k="solar_lon"]').value = numFmt(pos.coords.longitude.toFixed(2));
+      toast("Placering udfyldt – tryk Gem");
+    }, err => showResult(secEl, false, "Kunne ikke hente placeringen: " + err.message));
+  }
+});
+
 /* ---------- app (PWA) ---------- */
 function renderOffline(){
   const box = $("chips"); if(!box) return;
@@ -1095,11 +1452,14 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if(!document.documentElement.dataset.theme){ applyTheme(null); renderPrices(); loadSummary(); renderMood(); }
 });
 
-[loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights] =
-  [loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights].map(safe);
+[loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights, loadSettings] =
+  [loadStatus, loadPrices, loadSummary, loadSessions, loadSmart, loadInsights, loadSettings].map(safe);
 function refreshAll(){ loadSmart().then(() => { loadStatus(); loadPrices(); }); loadSummary(); loadSessions(); loadInsights(); }
 chartDefaults();
-showTab(location.hash.slice(1) || "nu", false);
+const initialHash = location.hash;
+showTab(initialHash.slice(1) || "nu", false);
+// Første start: gå direkte til opsætningen
+if(!initialHash) j("/api/settings").then(st => { if(st.foerste_start && st.kan_gemme) showTab("indstillinger", false); }).catch(() => {});
 refreshAll();
 setInterval(() => { loadStatus(); loadSmart(); }, 15000);
 setInterval(() => { loadPrices(); loadSummary(); loadSessions(); loadInsights(); }, 5*60000);

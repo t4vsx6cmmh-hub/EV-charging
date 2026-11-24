@@ -65,6 +65,7 @@ class PricingTest(unittest.TestCase):
         hours = sorted({(s["t"] - T0) // 3600 for s in plan["slots"]})
         self.assertEqual(hours, [11, 12])
         self.assertAlmostEqual(plan["kr"], 22 * 0.5)
+        self.assertAlmostEqual(plan["sol_kwh"], 22.0)
 
     def test_ev_accounting_counts_solar_at_sell_value(self):
         # bilen ladede 2,75 kWh i et kvarter, hvor måleren kun købte 1,0 kWh fra nettet

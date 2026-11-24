@@ -71,11 +71,15 @@ Se listen over tilsluttede enheder i din router (den hedder typisk noget med "Te
 
 Se din regning eller prisoversigten for dit produkt på Andel Energis hjemmeside. Tillægget står typisk i øre/kWh. Skriv det i kroner **uden moms** – fx 6 øre inkl. moms = `0.048`.
 
-### 6. Udfyld config.json
+### 6. Start appen og udfyld Opsætning
 
 ```bash
-cp config.example.json config.json
+python3 -m elopladning
 ```
+
+Åbn `http://<computerens-ip>:8080`. Første gang åbner appen selv fanen **Opsætning**: udfyld afsnittene, og tryk **Test forbindelse** – så ser du med det samme, om Wall Connector, Eloverblik, spotpriser, solprognose og notifikationer virker. Når du trykker **Gem**, oprettes `config.json` (kun læsbar for dig, da den indeholder tokens), og ændringerne bruges med det samme uden genstart.
+
+Du kan også redigere `config.json` direkte (`cp config.example.json config.json`). Felterne er:
 
 | Felt | Betydning |
 |---|---|
@@ -92,13 +96,9 @@ cp config.example.json config.json
 
 De øvrige felter (smart opladning, Tesla og notifikationer) er beskrevet nedenfor og kan stå tomme. Appen tjekker `config.json` ved start og fortæller præcist, hvilke felter der er forkerte.
 
-### 7. Start
+### 7. Brug den
 
-```bash
-python3 -m elopladning
-```
-
-Åbn `http://<computerens-ip>:8080` på telefonen, mens den er på hjemmenetværket.
+Åbn `http://<computerens-ip>:8080` på telefonen, mens den er på hjemmenetværket, og installér den som app (se nedenfor).
 
 Appen spørger Wall Connectoren hvert 30. sekund og henter priser og forbrug én gang i timen. Data gemmes i `elopladning.db`.
 
@@ -151,6 +151,24 @@ Hvor meget der skal lades, beregnes ud fra bilens batteriniveau og dit mål i % 
 4. Nyere biler kræver **signerede kommandoer**: kør Teslas [`tesla-http-proxy`](https://github.com/teslamotors/vehicle-command) på samme computer, og sæt `tesla_command_proxy` til fx `https://localhost:4443` og `tesla_proxy_ca_file` til proxyens certifikat. Batteridata hentes stadig direkte.
 
 Tesla tager betaling pr. kald til Fleet API (der er et gratis månedligt beløb). Appen holder kaldene nede: batteriet læses højst hver halve time, mens bilen er sat til, og en kommando gentages tidligst efter 10 minutter.
+
+## Autopilot
+
+Autopiloten lærer, hvornår du plejer at køre. Hver gang bilen tages ud af laderen, gemmes tidspunktet; første afgang om formiddagen (kl. 4–15) tæller som dagens afgang. For hver ugedag bruges de seneste 8 uger – er der under 3 afgange på en ugedag, bruges hverdage eller weekender samlet.
+
+"Klar kl." sættes forsigtigt: så bilen er klar før 80 % af dine kendte afgange, minus 15 minutters buffer. Uden Tesla-forbindelse lærer den også, hvor mange kWh du typisk lader.
+
+Under **Plan → Næste afgang** ser du, hvad autopiloten har lært for hver ugedag, og du kan ændre **kun næste afgang**: "Lang tur – lad helt op", en anden tid, eller træk i tidslinjen. Dagen efter gælder dine vaner igen. Autopiloten kan slås fra; så bruges den faste tid.
+
+## Solceller
+
+Har du solceller, så udfyld afsnittet **Solceller** i Opsætning: anlæggets størrelse (kWp), retning og hældning. Appen henter en vejrudsigt for dit tag (gratis fra Open-Meteo, ingen konto) og skønner produktionen time for time – det virker med alle invertere.
+
+- **Smart opladning vælger soltimer**, når det er billigst. Solstrøm, du selv bruger, koster det, du ellers ville have fået ved at sælge den (spotpris minus elselskabets gebyr ved salg), og planen viser, hvor mange kWh der ventes fra egne solceller.
+- **Regnskabet tager højde for solen.** Lader bilen mere i et kvarter, end elmåleren har købt fra nettet, er forskellen solstrøm og regnes til salgsværdien – ikke til fuld pris.
+- **Nu** viser solen i energiflowet, og **Priser** viser solprognosen for i dag og i morgen.
+
+Bemærk: Wall Connectoren lader med fast effekt (fx 11 kW). Er solens overskud mindre, kommer resten fra nettet, og prisen blandes tilsvarende. Husets forbrug i dagtimerne er et skøn (`solar_base_load_kw`), da Eloverblik kun viser det, der købes fra nettet.
 
 ## Notifikationer
 

@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import autopilot, calc, export, prices, smart, solar, tesla, wallconnector
+from . import autopilot, calc, export, prices, settings, smart, solar, tesla, wallconnector
 from .config import ConfigError, load_config
 from .db import DB
 from .eloverblik import Eloverblik
@@ -42,9 +42,12 @@ class Forbidden(ValueError):
 
 
 class App:
-    def __init__(self, cfg, demo=False):
+    def __init__(self, cfg, demo=False, config_path=None):
         self.cfg = cfg
         self.demo = demo
+        self.config_path = config_path   # hvor indstillinger fra appen gemmes
+        self.autosync = True             # hent nye data, når indstillinger ændres
+        self._tesla_state = None
         self.db = DB(os.path.join(ROOT, cfg["db_path"]))
         self.vitals = None
         self.vitals_ts = 0
@@ -54,21 +57,100 @@ class App:
         self.elo = None
         if cfg["eloverblik_refresh_token"] and not demo:
             self.elo = Eloverblik(cfg["eloverblik_refresh_token"])
-        self.car = None
         if demo:
             from .demo import DemoCar
             self.car = DemoCar()
-        elif tesla.configured(cfg, self.db):
-            try:
-                self.car = tesla.from_config(cfg, self.db)
-            except Exception as e:
-                self._err("tesla", e)
+        else:
+            self.car = self._make_car()
         self.notifier = make_notifier(cfg, demo)
         self.smart = smart.SmartCharger(
             cfg, self.db, self.car, self.charge_prices,
             learner=lambda now: autopilot.learn(
                 self.db.plug_events(now - autopilot.WEEKS * 7 * 86400), now))
         self.events = Events(self, self.notifier)
+
+    def _make_car(self):
+        if not tesla.configured(self.cfg, self.db):
+            self._err("tesla")
+            return None
+        try:
+            car = tesla.from_config(self.cfg, self.db)
+            self._err("tesla")
+            return car
+        except Exception as e:
+            self._err("tesla", e)
+            return None
+
+    # ------------------------------------------------------- indstillinger --
+    def apply_config(self, changed):
+        """Tag nye indstillinger i brug med det samme – uden genstart."""
+        self.cfg.update(changed)
+        keys = set(changed)
+        if "eloverblik_refresh_token" in keys:
+            tok = self.cfg["eloverblik_refresh_token"]
+            self.elo = Eloverblik(tok) if tok and not self.demo else None
+            self.db.set_kv("mpid", None)
+            self._err("eloverblik")
+        if "metering_point_id" in keys:
+            self.db.set_kv("mpid", None)
+        if "wall_connector_host" in keys:
+            self._err("wall_connector")
+        if keys & {k for k in settings.FIELD_TYPES if k.startswith("tesla_")} and not self.demo:
+            self.car = self._make_car()
+            self.smart.car = self.car
+        if keys & {"ntfy_topic", "ntfy_server", "ntfy_token"}:
+            self.notifier = make_notifier(self.cfg, self.demo)
+            self.events.n = self.notifier
+        if "price_area" in keys:
+            self.db.execute("DELETE FROM spot")  # priser for det gamle område
+        if any(k.startswith("solar_") for k in keys) or "price_area" in keys:
+            self.db.clear_solar()
+            self._err("solprognose")
+        if self.autosync and keys & {"eloverblik_refresh_token", "metering_point_id", "price_area",
+                                      "solar_kwp", "solar_orientation", "solar_tilt", "solar_lat",
+                                      "solar_lon", "solar_efficiency"}:
+            threading.Thread(target=self.sync_all, daemon=True).start()
+
+    def api_settings(self):
+        return settings.public(self.cfg, self)
+
+    def api_settings_post(self, body):
+        if not self.config_path or self.demo:
+            raise BadRequest("Indstillinger kan ikke gemmes i demo-tilstand")
+        try:
+            new, changed = settings.merge(self.cfg, body)
+        except ConfigError as e:
+            raise BadRequest(settings.readable(str(e))) from None
+        if changed:
+            settings.write_config(self.config_path, changed)
+            self.apply_config(changed)
+        out = settings.public(self.cfg, self)
+        out["aendret"] = sorted(changed)
+        return out
+
+    def api_test(self, kind, body):
+        return settings.test_connection(kind, self.cfg, body)
+
+    def api_tesla_login(self):
+        st = settings.tesla_status(self)
+        if not st["klar_til_login"]:
+            raise BadRequest("Udfyld og gem Client ID, Client secret og Redirect URL først")
+        import secrets as _s
+        self._tesla_state = _s.token_urlsafe(16)
+        return {"url": tesla.authorize_url(self.cfg["tesla_client_id"], self.cfg["tesla_redirect_uri"],
+                                           self._tesla_state)}
+
+    def tesla_finish(self, url_or_code, token_url=tesla.TOKEN_URL):
+        """Afslut Tesla-login (fra callback-adressen eller en indsat adresse)."""
+        try:
+            code = tesla.code_from_redirect(url_or_code, self._tesla_state)
+            tesla.finish_login(self.cfg, self.db, code, token_url=token_url)
+        except tesla.TeslaError as e:
+            raise BadRequest(str(e)) from None
+        self._tesla_state = None
+        self.car = self._make_car()
+        self.smart.car = self.car
+        return settings.tesla_status(self)
 
     # ------------------------------------------------------------ helpers --
     def _err(self, key, exc=None):
@@ -469,13 +551,30 @@ def make_handler(app):
                     q.get("group", "day"), _int(q, "antal", 31, 1, 400))),
                 "/api/sessions": lambda: self._json(app.api_sessions(_int(q, "dage", 60, 1, 3650))),
                 "/api/smart": lambda: self._json(app.smart.state()),
+                "/api/settings": lambda: self._json(app.api_settings()),
+                "/api/tesla/status": lambda: self._json(settings.tesla_status(app)),
                 "/api/export.csv": lambda: self._csv(app.api_export(q)),
             }
             if u.path in routes:
                 return self._handle(routes[u.path])
+            if u.path == "/tesla/callback":
+                return self._tesla_callback(u.query)
             if u.path.startswith("/api/"):
                 return self._json({"fejl": "ukendt"}, 404)
             return super().do_GET()
+
+        def _tesla_callback(self, query):
+            """Tesla sender dig hertil efter login (redirect URL = appens adresse + /tesla/callback)."""
+            try:
+                app.tesla_finish("?" + query)
+                target = "/#indstillinger?tesla=ok"
+            except BadRequest as e:
+                from urllib.parse import quote
+                target = "/#indstillinger?tesla=" + quote(str(e))
+            self.send_response(302)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def _csv(self, result):
             name, text = result
@@ -494,9 +593,15 @@ def make_handler(app):
                 "/api/sync": sync,
                 "/api/smart": lambda: self._json(app.api_smart_post(self._body())),
                 "/api/notify-test": lambda: (self._body(), self._json(app.api_notify_test())),
+                "/api/settings": lambda: self._json(app.api_settings_post(self._body())),
+                "/api/tesla/login": lambda: (self._body(), self._json(app.api_tesla_login())),
+                "/api/tesla/code": lambda: self._json(app.tesla_finish(str(self._body().get("url", "")))),
             }
             if path in routes:
                 return self._handle(routes[path])
+            if path.startswith("/api/test/"):
+                kind = path[len("/api/test/"):]
+                return self._handle(lambda: self._json(app.api_test(kind, self._body())))
             self._json({"fejl": "ukendt"}, 404)
 
     return Handler
@@ -524,13 +629,14 @@ def main():
         if not cfg["solar_kwp"]:
             cfg["solar_kwp"] = 6.0  # demoen viser et 6 kWp-anlæg
     elif not os.path.exists(args.config):
-        raise SystemExit("Mangler config.json – kopier config.example.json og udfyld den.")
+        log.info("Ingen config.json endnu – åbn dashboardet og udfyld Indstillinger, "
+                 "så oprettes den (%s)", args.config)
 
     if args.tesla_login:
         tesla.login_cli(cfg, DB(cfg["db_path"]))
         return
 
-    app = App(cfg, demo=args.demo)
+    app = App(cfg, demo=args.demo, config_path=None if args.demo else args.config)
     if args.demo:
         from . import demo
         demo.seed(app)

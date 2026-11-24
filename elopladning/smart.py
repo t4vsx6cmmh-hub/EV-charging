@@ -83,6 +83,14 @@ def make_plan(pm, now, deadline, kwh, charge_kw):
         cand.append({"t": t, "pris": None if p is None else round(p, 4), "estimeret": est})
     chosen = sorted(cand, key=lambda c: (math.inf if c["pris"] is None else c["pris"], c["t"]))[:n]
     chosen.sort(key=lambda c: c["t"])
+    if hasattr(pm, "solar_share"):  # solceller: hvor meget af planen dækker solen?
+        rest, sol = kwh, 0.0
+        for c in chosen:
+            c["sol"] = round(pm.solar_share(c["t"]), 2)
+            take = min(per_slot, rest)
+            sol += take * c["sol"]
+            rest -= take
+        plan["sol_kwh"] = round(sol, 1)
     plan.update({
         "slots": chosen,
         "perioder": merge_periods(chosen),
@@ -374,4 +382,5 @@ class SmartCharger:
             "fejl": self.error,
             "log": self.log,
             "ladeeffekt_kw": float(self.cfg["charge_kw"]),
+            "batteri_kwh": float(self.cfg["battery_kwh"]),
         }
